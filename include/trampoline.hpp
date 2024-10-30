@@ -25,7 +25,7 @@ namespace trampoline
 
 		static R do_invoke(Args... args)
 		{
-			#ifdef _WIN32
+			#if defined(_WIN32) && defined(_MSC_VER)
 			void* _rax = _asm_get_rax();
 			#else
 			void* _rax;
