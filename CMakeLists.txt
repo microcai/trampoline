@@ -76,5 +76,6 @@ target_include_directories(trampoline PUBLIC include)
 option(ENABLE_TESTS "enable tests" ON)
 
 if (ENABLE_TESTS)
+	enable_testing()
     add_subdirectory(test)
 endif()
