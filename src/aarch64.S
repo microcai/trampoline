@@ -4,9 +4,8 @@ trampoline_entry_code_length:
     ret
 
 trampoline_entry_point:
-    lea -7(%rip), %rax
-    nop
-    jmp *2(%rip)
+    str x30, [sp, #8]
+    blr x8
     nop
     nop
     nop
