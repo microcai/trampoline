@@ -1,4 +1,6 @@
+# 为 C 接口的回调增加 lambda 支持。甚至它不需要 `void *user_data` 参数！
 
+```c++
 #include "trampoline.hpp"
 #include <iostream>
 
@@ -21,3 +23,7 @@ int main()
 
     return test_callback(test_cb);
 }
+```
+
+# add lambda support for C style callback that does not even have `void* user_data` parameter.
+
