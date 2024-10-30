@@ -1,8 +1,10 @@
 
+.align 16
 trampoline_entry_code_length:
     mov $16,%rax
     ret
 
+.align 16
 trampoline_entry_point:
     lea -7(%rip), %rax
     mov %rax, -16(%rsp)
@@ -26,6 +28,8 @@ trampoline_entry_point:
     nop
     nop
 
+
+.align 16
 _asm_get_rax:
     ret
 
