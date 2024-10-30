@@ -36,7 +36,3 @@ _asm_get_rax:
 .global trampoline_entry_code_length
 .global trampoline_entry_point
 .global _asm_get_rax
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack,"",%progbits
-#endif

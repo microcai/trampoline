@@ -25,5 +25,11 @@ int main()
 }
 ```
 
+# 支持的平台
+
+目前支持的平台为  x86_64/x86/arm64
+
+
+
 # add lambda support for C style callback that does not even have `void* user_data` parameter.
 
