@@ -6,21 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(ASM_SRC "")
 
 if (MSVC)
-enable_language(CXX C ASM_MASM)
-
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-list(APPEND ASM_SRC src/x86_64.asm)
-
-else()
-
-list(APPEND ASM_SRC src/x86.asm)
-
-endif()
-
-add_link_options(/INCREMENTAL:NO)
-add_link_options(/SAFESEH:NO)
-
+	add_link_options(/INCREMENTAL:NO)
+	add_link_options(/SAFESEH:NO)
 endif(MSVC)
 
 if(WIN32)
