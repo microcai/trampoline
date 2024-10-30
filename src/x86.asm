@@ -1,6 +1,11 @@
 
-.model flat, C
-.code
+.MODEL FLAT
+.CODE
+
+trampoline_entry_code_length proc public
+    mov eax, 16
+    ret
+trampoline_entry_code_length endp
 
 trampoline_entry_point proc public
     call get_eip
@@ -9,20 +14,6 @@ trampoline_entry_point proc public
 get_eip:
     mov eax, DWORD PTR [esp]
     ret
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
     nop
     nop
     nop

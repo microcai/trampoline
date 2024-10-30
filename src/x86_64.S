@@ -1,4 +1,8 @@
 
+trampoline_entry_code_length:
+    mov $16,%rax
+    ret
+
 trampoline_entry_point:
     lea -7(%rip), %rax
     nop
@@ -25,7 +29,7 @@ trampoline_entry_point:
 _asm_get_rax:
     ret
 
-
+.global trampoline_entry_code_length
 .global trampoline_entry_point
 .global _asm_get_rax
 

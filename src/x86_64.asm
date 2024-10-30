@@ -2,7 +2,12 @@
 
 .code
 
-trampoline_entry_point proc
+trampoline_entry_code_length proc public
+    mov rax, 16
+    ret
+trampoline_entry_code_length endp
+
+trampoline_entry_point proc public
     lea rax, $
     nop
     jmp QWORD PTR [$+8]

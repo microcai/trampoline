@@ -12,7 +12,7 @@
 namespace trampoline
 {
 	const unsigned char * _machine_code_template();
-	int trampoline_entry_code_length();
+	extern "C" int trampoline_entry_code_length();
 	extern "C" void * _asm_get_rax();
 
 	////////////////////////////////////////////////////////////////////
