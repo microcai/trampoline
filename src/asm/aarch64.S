@@ -1,11 +1,13 @@
 
 trampoline_entry_code_length:
-    mov x0, 16
+    mov x0, 24
     ret
 
 trampoline_entry_point:
-    str x30, [sp, #8]
-    blr x8
+    ADR x8, .
+    add x9, x8, #20
+    ldr x9,[x9]
+    blr x9
     nop
     nop
     nop
