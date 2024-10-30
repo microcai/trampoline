@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include <cstddef>
 
 struct ExecutableAllocator
 {

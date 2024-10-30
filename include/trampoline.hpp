@@ -12,6 +12,7 @@
 namespace trampoline
 {
 	const unsigned char * _machine_code_template();
+	extern "C" void * _asm_get_rax();
 
 	////////////////////////////////////////////////////////////////////
 	template<typename Signature>
@@ -24,8 +25,12 @@ namespace trampoline
 
 		static R do_invoke(Args... args)
 		{
+			#ifdef _WIN32
+			void* _rax = _asm_get_rax();
+			#else
 			void* _rax;
 			asm("\t mov %%rax,%0" : "=r"(_rax));
+			#endif
 
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
 
@@ -55,7 +60,7 @@ namespace trampoline
 
 		operator function_ptr()
 		{
-			return reinterpret_cast<function_ptr>(this->_jit_code);
+			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
 		}
 
 		R operator()(Args... args)
