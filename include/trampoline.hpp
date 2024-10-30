@@ -25,12 +25,7 @@ namespace trampoline
 
 		static R do_invoke(Args... args)
 		{
-			#if defined(_WIN32) && defined(_MSC_VER)
 			void* _rax = _asm_get_rax();
-			#else
-			void* _rax;
-			asm("\t mov %%rax,%0" : "=r"(_rax));
-			#endif
 
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
 
