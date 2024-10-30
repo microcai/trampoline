@@ -1,0 +1,7 @@
+
+trampoline_entry_point:
+    nop
+    lea rax, QWORD PTR [rip - 8]
+    jmp QWORD PTR [rip + 2]
+    nop
+    nop

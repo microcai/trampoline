@@ -1,0 +1,7 @@
+
+trampoline_entry_point:
+    nop
+    lea -8(%rip), %rax
+    jmp *2(%rip)
+    nop
+    nop
