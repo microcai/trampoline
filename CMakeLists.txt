@@ -11,7 +11,7 @@ if (MSVC)
 endif(MSVC)
 
 if(WIN32)
-	enable_language(CXX ASM_MASM)
+	enable_language(CXX ASM ASM_MASM)
     set(ASSEMBLER masm)
     set(ASM_FILE_EXT "asm")
 	set(EXEUCTABLEFORMAT "pe")

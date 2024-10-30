@@ -2,12 +2,12 @@
 .MODEL FLAT
 .CODE
 
-trampoline_entry_code_length proc public
+_trampoline_entry_code_length proc public
     mov eax, 16
     ret
-trampoline_entry_code_length endp
+_trampoline_entry_code_length endp
 
-trampoline_entry_point proc public
+_trampoline_entry_point proc public
     call get_eip
     sub  eax,5
     jmp  DWORD PTR[eax + 16]
@@ -19,10 +19,10 @@ get_eip:
     nop
     nop
     nop
-trampoline_entry_point endp
+_trampoline_entry_point endp
 
-_asm_get_rax proc
+__asm_get_rax proc
     ret
-_asm_get_rax endp
+__asm_get_rax endp
 
 end
