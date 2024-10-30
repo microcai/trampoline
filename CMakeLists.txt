@@ -85,5 +85,8 @@ add_library(trampoline src/executable_allocator.cpp src/trampoline.cpp ${ASM_SRC
 
 target_include_directories(trampoline PUBLIC include)
 
-add_subdirectory(test)
+option(ENABLE_TESTS "enable tests" ON)
 
+if (ENABLE_TESTS)
+    add_subdirectory(test)
+endif()
