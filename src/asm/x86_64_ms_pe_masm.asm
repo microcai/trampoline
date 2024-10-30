@@ -9,20 +9,7 @@ trampoline_entry_code_length endp
 
 trampoline_entry_point proc public
     lea rax, $
-    nop
-    jmp QWORD PTR [$+8]
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
+    jmp QWORD PTR [rax+16]
     nop
     nop
     nop
