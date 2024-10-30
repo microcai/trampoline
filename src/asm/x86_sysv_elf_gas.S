@@ -5,11 +5,11 @@ trampoline_entry_code_length:
 
 trampoline_entry_point:
     call get_eip    //5 字节
-    sub $5 , %eax // 3 字节
     mov %eax, -16(%esp)
 	jmpl * 24(%eax)
 get_eip:
     mov (%esp), %eax // 3 字节
+    sub $5 , %eax // 3 字节
     ret // 1 字节
     nop // 这里就是 *16(%eax) 指向的地方了 会存储 4 字节的 pointer
     nop
