@@ -63,6 +63,13 @@ jobs:
         echo "CC=${{ matrix.c_compiler }}" >> $GITHUB_ENV
         echo "CXX=${{ matrix.cpp_compiler }}" >> $GITHUB_ENV
 
+    - name: gcc-14 setup on ubnutu
+      if: startsWith(runner.os, 'Linux') && startsWith(matrix.c_compiler, 'gcc')
+      shell: bash
+      run: |
+        echo "CC=gcc-14" >> $GITHUB_ENV
+        echo "CXX=g++-14" >> $GITHUB_ENV
+      
     - name: compiler setup on Mac OS
       if: startsWith(runner.os, 'macOS') && startsWith(matrix.c_compiler, 'clang')
       shell: bash
