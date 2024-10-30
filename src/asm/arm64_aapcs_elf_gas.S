@@ -1,13 +1,15 @@
 
+.p2align 8
 trampoline_entry_code_length:
-    mov x0, 24
+    mov x0, #24
     ret
 
+.p2align 8
 trampoline_entry_point:
-    ADR x8, .
-    add x9, x8, #20
+    ADR x10, .
+    add x9, x10, #24
     ldr x9,[x9]
-    blr x9
+    br x9
     nop
     nop
     nop
@@ -27,7 +29,9 @@ trampoline_entry_point:
     nop
     nop
 
+.p2align 8
 _asm_get_rax:
+    mov x0, x10
     ret
 
 .global trampoline_entry_code_length
