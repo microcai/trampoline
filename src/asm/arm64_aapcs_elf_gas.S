@@ -1,18 +1,17 @@
 
 .p2align 8
 trampoline_entry_code_length:
-    mov x0, #24
+    mov x0, #16
     ret
 
 .p2align 8
 trampoline_entry_point:
     ADR x10, .
-    add x9, x10, #24
-    ldr x9,[x9]
+    ldr x9, dummy_ptr
     br x9
     nop
-    nop
-    nop
+dummy_ptr: .dword 0x00000000
+    .dword 0x00000000
     nop
     nop
     nop
