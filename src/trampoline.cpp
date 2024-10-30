@@ -3,6 +3,16 @@
 
 extern "C" void trampoline_entry_point();
 
+int trampoline::trampoline_entry_code_length()
+{
+#if  defined(__x86_64__) ||defined(_M_AMD64) || defined (__i386__) || defined(_M_IX86)
+	return 16;
+#else
+	return 20;
+#endif
+}
+
+
 const unsigned char* trampoline::_machine_code_template()
 {
 #if  defined(__x86_64__) ||defined(_M_AMD64)

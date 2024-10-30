@@ -12,6 +12,7 @@
 namespace trampoline
 {
 	const unsigned char * _machine_code_template();
+	int trampoline_entry_code_length();
 	extern "C" void * _asm_get_rax();
 
 	////////////////////////////////////////////////////////////////////
@@ -49,8 +50,10 @@ namespace trampoline
 		{
 			void* wrap_func_ptr = reinterpret_cast<void*>(&do_invoke);
 
-			memcpy(_jit_code, _machine_code_template(), 16);
-			memcpy(_jit_code + 16, &wrap_func_ptr, 8);
+			auto code_len = trampoline_entry_code_length();
+
+			memcpy(_jit_code, _machine_code_template(), code_len);
+			memcpy(_jit_code + code_len, &wrap_func_ptr, sizeof(wrap_func_ptr));
 		}
 
 		operator function_ptr()
@@ -75,7 +78,7 @@ namespace trampoline
 
 		friend class c_function_ptr<R(Args...)>;
 
-		unsigned char _jit_code[24];
+		unsigned char _jit_code[32];
 		std::atomic_int ref_count;
 		std::function<R(Args...)> user_function;
 	};
