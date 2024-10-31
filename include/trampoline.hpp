@@ -11,8 +11,10 @@
 
 #ifdef __MSC_VER
 #define __NO_STACK_PROTECT __declspec(safebuffers)
-#else
+#elif defined(__GNUC__) || defined(__clang__)
 #define __NO_STACK_PROTECT __attribute__((no_stack_protector))
+#else
+#define __NO_STACK_PROTECT
 #endif
 
 namespace trampoline
