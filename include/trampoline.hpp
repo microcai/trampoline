@@ -26,7 +26,12 @@ namespace trampoline
 
 		static R do_invoke(Args... args) noexcept
 		{
+			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
+			void* _rax;
+			asm("mov %%rax, %0": "=r"(_rax));
+			#else
 			void* _rax = _asm_get_rax();
+			#endif
 
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
 
@@ -61,7 +66,7 @@ namespace trampoline
 			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
 		}
 
-		R operator()(Args... args)
+		R operator()(Args... args) noexcept
 		{
 			auto a = make_scoped_exit([this]() { unref(); });
 
