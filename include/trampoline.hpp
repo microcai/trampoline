@@ -1,13 +1,19 @@
 
 #pragma once
 
-#include <atomic>
+#include <memory>
 #include <functional>
 #include <iostream>
 #include <string.h>
 
-#include "executable_allocator.hpp"
-#include "scoped_exit.hpp"
+#include "./executable_allocator.hpp"
+#include "./scoped_exit.hpp"
+
+#ifdef __MSC_VER
+#define __NO_STACK_PROTECT __declspec(safebuffers)
+#else
+#define __NO_STACK_PROTECT __attribute__((no_stack_protector))
+#endif
 
 namespace trampoline
 {
@@ -25,9 +31,14 @@ namespace trampoline
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
 
+		using ParentClass = c_function_ptr<R(Args...)>;
+
+		using user_function_no_this_type = std::function<R(Args...)>;
+		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
+
 		typedef R (*function_ptr)(Args...);
 
-		static R do_invoke(Args... args) noexcept
+		__NO_STACK_PROTECT static R do_invoke(Args... args) noexcept
 		{
 			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
 			void* _rax;
@@ -38,8 +49,6 @@ namespace trampoline
 			#else
 			void* _rax = _asm_get_rax();
 			#endif
-
-		    std::cerr << "do_invoke called by trampoline code@" << _rax << std::endl;
 
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
 
@@ -56,9 +65,23 @@ namespace trampoline
 			return ExecutableAllocator{}.deallocate(ptr, size);
 		}
 
-		template<typename LambdaFunction>
-		explicit dynamic_function(LambdaFunction&& lambda)
-			: ref_count(2)
+		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_no_this_type>
+		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
+			: parent(parent)
+			, user_function_no_this(std::forward<LambdaFunction>(lambda))
+		{
+			void* wrap_func_ptr = reinterpret_cast<void*>(&do_invoke);
+
+			auto code_len = trampoline_entry_code_length();
+
+			memcpy(_jit_code, _machine_code_template(), code_len);
+			memcpy(_jit_code + code_len, &wrap_func_ptr, sizeof(wrap_func_ptr));
+			ExecutableAllocator{}.protect(this, sizeof (*this));
+		}
+
+		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
+		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
+			: parent(parent)
 			, user_function(std::forward<LambdaFunction>(lambda))
 		{
 			void* wrap_func_ptr = reinterpret_cast<void*>(&do_invoke);
@@ -75,26 +98,19 @@ namespace trampoline
 			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
 		}
 
-		R operator()(Args... args) noexcept
+		__NO_STACK_PROTECT R operator()(Args... args) noexcept
 		{
-			auto a = make_scoped_exit([this]() { unref(); });
-
-			return user_function(args...);
-		}
-
-		void unref()
-		{
-			if (ref_count.fetch_sub(1) == 1)
-			{
-				delete this;
-			}
+			if (user_function)
+				return user_function(parent, args...);
+			return user_function_no_this(args...);
 		}
 
 		friend class c_function_ptr<R(Args...)>;
 
 		unsigned char _jit_code[32];
-		std::atomic_int ref_count;
-		std::function<R(Args...)> user_function;
+		ParentClass* parent;
+		user_function_no_this_type user_function_no_this;
+		user_function_with_this_type user_function;
 	};
 
 	template<typename R, typename... Args>
@@ -106,12 +122,12 @@ namespace trampoline
 
 		template<typename LambdaFunction>
 		explicit c_function_ptr(LambdaFunction&& lambda)
+			: _impl(new wrapper_class(this, std::forward<LambdaFunction>(lambda)))
 		{
-			_impl = new wrapper_class(std::forward<LambdaFunction>(lambda));
 		}
 
 		c_function_ptr(c_function_ptr&&) = delete;
-		c_function_ptr(c_function_ptr&) = delete;
+		c_function_ptr(const c_function_ptr&) = delete;
 
 		typedef R (*function_ptr)(Args...);
 
@@ -120,23 +136,9 @@ namespace trampoline
 			return static_cast<function_ptr>(*_impl);
 		}
 
-		void no_auto_destory()
-		{
-			_impl->ref_count = 0;
-		}
-
-		void destory()
-		{
-			delete _impl;
-			_impl = nullptr;
-		}
-
 		~c_function_ptr()
 		{
-			if (_impl)
-			{
-				_impl->unref();
-			}
+			delete _impl;
 		}
 	};
 
