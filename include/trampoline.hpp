@@ -24,7 +24,7 @@ namespace trampoline
 	{
 		typedef R (*function_ptr)(Args...);
 
-		static R do_invoke(Args... args)
+		static R do_invoke(Args... args) noexcept
 		{
 			void* _rax = _asm_get_rax();
 
