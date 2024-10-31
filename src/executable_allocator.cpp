@@ -38,7 +38,11 @@ void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
 void * ExecutableAllocator::allocate(std::size_t size)
 {
   // return malloc(size);
+#ifdef MAP_JIT
+    auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_JIT, -1, 0);
+#else
     auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
     if (out == nullptr)
     {
         std::cerr << "unable to alloc executable page\n";
@@ -55,7 +59,7 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 
 void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
 {
-    mprotect(raw_ptr, size, PROT_EXEC|PROT_READ|PROT_WRITE);
+    mprotect(raw_ptr, size, PROT_EXEC|PROT_READ);
 }
 
 void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
