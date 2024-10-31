@@ -32,6 +32,9 @@ namespace trampoline
 			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
 			void* _rax;
 			asm("mov %%rax, %0": "=r"(_rax));
+			#elif defined (__aarch64__)
+			void* _rax;
+			asm("mov %[out], x10": [out]"=r"(_rax));
 			#else
 			void* _rax = _asm_get_rax();
 			#endif
