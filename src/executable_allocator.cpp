@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #endif
 
+#include <iostream>
 #include "executable_allocator.hpp"
 
 #ifdef _WIN32
@@ -25,7 +26,13 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 void * ExecutableAllocator::allocate(std::size_t size)
 {
   // return malloc(size);
-    return mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    auto out = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (out == nullptr)
+    {
+        std::cerr << "unable to alloc executable page\n";
+        std::terminate();
+    }
+    return out;
 }
 
 void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
