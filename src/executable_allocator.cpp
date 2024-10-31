@@ -12,7 +12,7 @@
 
 void * ExecutableAllocator::allocate(std::size_t size)
 {
-    auto allocated_mem = VirtualAlloc(0, size, MEM_COMMIT| MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    auto allocated_mem = VirtualAlloc(0, size, MEM_COMMIT| MEM_RESERVE, PAGE_READWRITE);
     return allocated_mem;
 }
 
@@ -23,10 +23,14 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 
 void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
 {
+    DWORD old;
+    VirtualProtect(raw_ptr, size, PAGE_EXECUTE_READ, &old);
 }
 
 void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
 {
+    DWORD old;
+    VirtualProtect(raw_ptr, size, PAGE_READWRITE, &old);
 }
 
 #else
