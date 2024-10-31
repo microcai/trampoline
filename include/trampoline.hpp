@@ -27,13 +27,11 @@ namespace trampoline
 	template<typename Signature>
 	struct c_function_ptr;
 
-	template<typename R, typename... Args>
+	template<typename ParentClass, typename R, typename... Args>
 	class dynamic_function
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
-
-		using ParentClass = c_function_ptr<R(Args...)>;
 
 		using user_function_no_this_type = std::function<R(Args...)>;
 		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
@@ -95,6 +93,11 @@ namespace trampoline
 			ExecutableAllocator{}.protect(this, sizeof (*this));
 		}
 
+		~dynamic_function()
+		{
+			ExecutableAllocator{}.unprotect(this, sizeof (*this));
+		}
+
 		operator function_ptr()
 		{
 			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
@@ -107,7 +110,7 @@ namespace trampoline
 			return user_function_no_this(args...);
 		}
 
-		friend class c_function_ptr<R(Args...)>;
+		friend ParentClass;
 
 		unsigned char _jit_code[32];
 		ParentClass* parent;
@@ -118,7 +121,7 @@ namespace trampoline
 	template<typename R, typename... Args>
 	struct c_function_ptr<R(Args...)>
 	{
-		using wrapper_class = dynamic_function<R, Args...>;
+		using wrapper_class = dynamic_function<c_function_ptr, R, Args...>;
 
 		wrapper_class* _impl;
 

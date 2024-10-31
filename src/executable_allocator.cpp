@@ -25,6 +25,10 @@ void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
 {
 }
 
+void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
+{
+}
+
 #else
 
 void * ExecutableAllocator::allocate(std::size_t size)
@@ -48,6 +52,11 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
 {
     mprotect(raw_ptr, size, PROT_EXEC|PROT_READ|PROT_WRITE);
+}
+
+void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
+{
+    mprotect(raw_ptr, size, PROT_READ|PROT_WRITE);
 }
 
 #endif

@@ -9,5 +9,6 @@ struct ExecutableAllocator
 
 	void deallocate(void* raw_ptr, std::size_t size);
 	void protect(void* raw_ptr, std::size_t size);
+	void unprotect(void* raw_ptr, std::size_t size);
 };
 
