@@ -31,7 +31,7 @@ int main()
             auto a = trampoline::make_scoped_exit([&]{delete this_cb;});
 
             std::cout << happy << " world " << arg1 << std::endl;
-            return 44;
+            return 0;
         });
 
         // return test_multi_callback(test_cb); <---- this will crash!
