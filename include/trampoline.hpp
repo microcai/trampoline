@@ -22,6 +22,9 @@ namespace trampoline
 	template<typename R, typename... Args>
 	class dynamic_function
 	{
+		dynamic_function(dynamic_function&&) = delete;
+		dynamic_function(dynamic_function&) = delete;
+
 		typedef R (*function_ptr)(Args...);
 
 		static R do_invoke(Args... args) noexcept
@@ -100,6 +103,9 @@ namespace trampoline
 		{
 			_impl = new wrapper_class(std::forward<LambdaFunction>(lambda));
 		}
+
+		c_function_ptr(c_function_ptr&&) = delete;
+		c_function_ptr(c_function_ptr&) = delete;
 
 		typedef R (*function_ptr)(Args...);
 
