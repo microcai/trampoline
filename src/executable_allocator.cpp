@@ -21,12 +21,16 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 	VirtualFree(raw_ptr, size, 0);
 }
 
+void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
+{
+}
+
 #else
 
 void * ExecutableAllocator::allocate(std::size_t size)
 {
   // return malloc(size);
-    auto out = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (out == nullptr)
     {
         std::cerr << "unable to alloc executable page\n";
@@ -40,4 +44,10 @@ void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
     // free(raw_ptr);
     munmap(raw_ptr, size);
 }
+
+void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
+{
+    mprotect(raw_ptr, size, PROT_EXEC|PROT_READ|PROT_WRITE);
+}
+
 #endif

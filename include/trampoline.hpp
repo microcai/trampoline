@@ -3,7 +3,7 @@
 
 #include <atomic>
 #include <functional>
-#include <memory>
+#include <iostream>
 #include <string.h>
 
 #include "executable_allocator.hpp"
@@ -39,6 +39,8 @@ namespace trampoline
 			void* _rax = _asm_get_rax();
 			#endif
 
+		    std::cerr << "do_invoke called by trampoline code@" << _rax << std::endl;
+
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
 
 			return (*_this)(args...);
@@ -65,6 +67,7 @@ namespace trampoline
 
 			memcpy(_jit_code, _machine_code_template(), code_len);
 			memcpy(_jit_code + code_len, &wrap_func_ptr, sizeof(wrap_func_ptr));
+			ExecutableAllocator{}.protect(this, sizeof (*this));
 		}
 
 		operator function_ptr()

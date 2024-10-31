@@ -6,7 +6,7 @@ extern "C" void trampoline_entry_point();
 const unsigned char* trampoline::_machine_code_template()
 {
 	#if defined (__aarch64__)
-	static constinit uint32_t arm64_trampoline_code[] = {
+	static const uint32_t arm64_trampoline_code[] = {
 		0x1000000a,
 		0x58000069,
 		0xd61f0120,
