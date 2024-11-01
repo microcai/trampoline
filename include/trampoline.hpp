@@ -25,6 +25,9 @@ namespace trampoline
 	template<typename Signature>
 	struct c_function_ptr;
 
+	template<typename Signature>
+	struct c_stdcall_function_ptr;
+
 	class dynamic_function_base_trampoline
 	{
 	protected:
@@ -32,7 +35,7 @@ namespace trampoline
 		void  setup_trampoline(const void* wrap_func_ptr);
 	};
 
-	template<typename ParentClass, typename R, typename... Args>
+	template<typename ParentClass, bool use_stdcall, typename R, typename... Args>
 	class dynamic_function : public dynamic_function_base_trampoline
 	{
 		dynamic_function(dynamic_function&&) = delete;
@@ -40,8 +43,6 @@ namespace trampoline
 
 		using user_function_no_this_type = std::function<R(Args...)>;
 		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
-
-		typedef R (*function_ptr)(Args...);
 
 		static R do_invoke(Args... args) noexcept
 		{
@@ -59,6 +60,25 @@ namespace trampoline
 
 			return (*_this)(args...);
 		}
+
+#ifdef _M_IX86
+		static R __attribute((stdcall)) stdcall_do_invoke(Args... args) noexcept
+		{
+			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
+			void* _rax;
+			asm("mov %%rax, %0": "=r"(_rax));
+			#elif defined (__aarch64__)
+			void* _rax;
+			asm("mov %[out], x10": [out]"=r"(_rax));
+			#else
+			void* _rax = _asm_get_rax();
+			#endif
+
+			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
+
+			return (*_this)(args...);
+		}
+#endif
 
 		void* operator new(std::size_t size)
 		{
@@ -88,7 +108,16 @@ namespace trampoline
 
 		void attach_trampoline()
 		{
-			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+#ifdef _M_IX86
+			if constexpr (use_stdcall)
+			{
+				setup_trampoline(reinterpret_cast<void*>(&stdcall_do_invoke));
+			}
+			else
+#endif
+			{
+				setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+			}
 		}
 
 		~dynamic_function()
@@ -96,9 +125,9 @@ namespace trampoline
 			ExecutableAllocator{}.unprotect(this, sizeof (*this));
 		}
 
-		operator function_ptr()
+		void* raw_function_ptr()
 		{
-			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
+			return reinterpret_cast<void*>(this->_jit_code);
 		}
 
 		R operator()(Args... args) noexcept
@@ -118,7 +147,9 @@ namespace trampoline
 	template<typename R, typename... Args>
 	struct c_function_ptr<R(Args...)>
 	{
-		using wrapper_class = dynamic_function<c_function_ptr, R, Args...>;
+		typedef R (*function_ptr_t)(Args...);
+
+		using wrapper_class = dynamic_function<c_function_ptr, false, R, Args...>;
 
 		wrapper_class* _impl;
 
@@ -131,11 +162,9 @@ namespace trampoline
 		c_function_ptr(c_function_ptr&&) = delete;
 		c_function_ptr(const c_function_ptr&) = delete;
 
-		typedef R (*function_ptr)(Args...);
-
-		operator function_ptr()
+		operator function_ptr_t()
 		{
-			return static_cast<function_ptr>(*_impl);
+			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
 		}
 
 		~c_function_ptr()
@@ -150,4 +179,41 @@ namespace trampoline
 		using c_function_ptr<R(Args...)>::c_function_ptr;
 	};
 
+#ifdef _M_IX86
+	template<typename R, typename... Args>
+	struct c_stdcall_function_ptr<R(Args...)>
+	{
+		typedef R ( __stdcall *function_ptr_t)(Args...);
+
+		using wrapper_class = dynamic_function<c_stdcall_function_ptr, true, R, Args...>;
+
+		wrapper_class* _impl;
+
+		template<typename LambdaFunction>
+		explicit c_stdcall_function_ptr(LambdaFunction&& lambda)
+			: _impl(new wrapper_class(this, std::forward<LambdaFunction>(lambda)))
+		{
+		}
+
+		c_stdcall_function_ptr(c_stdcall_function_ptr&&) = delete;
+		c_stdcall_function_ptr(const c_stdcall_function_ptr&) = delete;
+
+
+		operator function_ptr_t()
+		{
+			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
+		}
+
+		~c_stdcall_function_ptr()
+		{
+			delete _impl;
+		}
+	};
+
+	template<typename R, typename... Args>
+	struct c_function_ptr<R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<R(Args...)>
+	{
+		using c_stdcall_function_ptr<R(Args...)>::c_stdcall_function_ptr;
+	};
+#endif
 } // namespace trampoline

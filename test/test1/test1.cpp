@@ -2,7 +2,8 @@
 #include "trampoline.hpp"
 #include <iostream>
 
-typedef int (* callback_function_t)(int, void*, float);
+// typedef int __stdcall ( * callback_function_t)(int, void*, float);
+typedef int ( * callback_function_t)(int, void*, float);
 
 int test_once_callback(callback_function_t cb)
 {
