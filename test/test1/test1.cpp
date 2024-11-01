@@ -11,7 +11,7 @@ int test_once_callback(callback_function_t cb)
 
 int test_multi_callback(callback_function_t cb)
 {
-    cb(1, 0, 1222.0f);
+    cb(33, 0, 1222.0f);
     return cb(1, 0, 2333.0f);
 }
 

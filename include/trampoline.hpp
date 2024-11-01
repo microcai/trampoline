@@ -29,7 +29,7 @@ namespace trampoline
 	{
 	protected:
 		unsigned char _jit_code[32];
-		void  setup_trampoline(void* wrap_func_ptr);
+		void  setup_trampoline(const void* wrap_func_ptr);
 	};
 
 	template<typename ParentClass, typename R, typename... Args>
@@ -75,7 +75,12 @@ namespace trampoline
 			: parent(parent)
 			, user_function_no_this(std::forward<LambdaFunction>(lambda))
 		{
+			#if defined (__i386__)
+			R(dynamic_function::* operator_call_ptr)(Args...) = &dynamic_function::operator();
+			setup_trampoline(reinterpret_cast<const void*>(operator_call_ptr));
+			#else
 			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+			#endif
 		}
 
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
@@ -83,7 +88,12 @@ namespace trampoline
 			: parent(parent)
 			, user_function(std::forward<LambdaFunction>(lambda))
 		{
+			#if defined (__i386__)
+			R(dynamic_function::* operator_call_ptr)(Args...) = &dynamic_function::operator();
+			setup_trampoline(reinterpret_cast<void*>(operator_call_ptr));
+			#else
 			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+			#endif
 		}
 
 		~dynamic_function()

@@ -13,6 +13,7 @@ PUBLIC trampoline_entry_code_length
 
 trampoline_code:
     call get_eip
+    mov ecx, eax
     jmp  DWORD PTR[eax + CODE_LEN]
 get_eip:
     mov eax, DWORD PTR [esp]

@@ -7,7 +7,7 @@ extern "C" // from assembly code
 	extern long trampoline_entry_code_length;
 }
 
-void trampoline::dynamic_function_base_trampoline::setup_trampoline(void* wrap_func_ptr)
+void trampoline::dynamic_function_base_trampoline::setup_trampoline(const void* wrap_func_ptr)
 {
 	auto code_len = trampoline_entry_code_length;
 	auto machine_code_template = trampoline_entry_point();
