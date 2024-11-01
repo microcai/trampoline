@@ -19,16 +19,21 @@
 
 namespace trampoline
 {
-	const unsigned char * _machine_code_template();
-	extern "C" int trampoline_entry_code_length();
 	extern "C" void * _asm_get_rax();
 
 	////////////////////////////////////////////////////////////////////
 	template<typename Signature>
 	struct c_function_ptr;
 
+	class dynamic_function_base_trampoline
+	{
+	protected:
+		unsigned char _jit_code[32];
+		void  setup_trampoline(void* wrap_func_ptr);
+	};
+
 	template<typename ParentClass, typename R, typename... Args>
-	class dynamic_function
+	class dynamic_function : public dynamic_function_base_trampoline
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
@@ -70,13 +75,7 @@ namespace trampoline
 			: parent(parent)
 			, user_function_no_this(std::forward<LambdaFunction>(lambda))
 		{
-			void* wrap_func_ptr = reinterpret_cast<void*>(&do_invoke);
-
-			auto code_len = trampoline_entry_code_length();
-
-			memcpy(_jit_code, _machine_code_template(), code_len);
-			memcpy(_jit_code + code_len, &wrap_func_ptr, sizeof(wrap_func_ptr));
-			ExecutableAllocator{}.protect(this, sizeof (*this));
+			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
 		}
 
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
@@ -84,13 +83,7 @@ namespace trampoline
 			: parent(parent)
 			, user_function(std::forward<LambdaFunction>(lambda))
 		{
-			void* wrap_func_ptr = reinterpret_cast<void*>(&do_invoke);
-
-			auto code_len = trampoline_entry_code_length();
-
-			memcpy(_jit_code, _machine_code_template(), code_len);
-			memcpy(_jit_code + code_len, &wrap_func_ptr, sizeof(wrap_func_ptr));
-			ExecutableAllocator{}.protect(this, sizeof (*this));
+			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
 		}
 
 		~dynamic_function()
@@ -112,7 +105,6 @@ namespace trampoline
 
 		friend ParentClass;
 
-		unsigned char _jit_code[32];
 		ParentClass* parent;
 		user_function_no_this_type user_function_no_this;
 		user_function_with_this_type user_function;
