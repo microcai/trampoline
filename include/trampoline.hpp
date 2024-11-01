@@ -89,7 +89,6 @@ namespace trampoline
 
 		void attach_trampoline()
 		{
-#ifdef _M_IX86
 			if constexpr (use_stdcall)
 			{
 				auto call_op_func = &dynamic_function::operator();
@@ -98,7 +97,6 @@ namespace trampoline
 				setup_trampoline(raw);
 			}
 			else
-#endif
 			{
 				setup_trampoline(reinterpret_cast<void*>(&do_invoke));
 			}
