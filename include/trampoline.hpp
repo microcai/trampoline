@@ -61,25 +61,6 @@ namespace trampoline
 			return (*_this)(args...);
 		}
 
-#ifdef _M_IX86
-		static R __attribute((stdcall)) stdcall_do_invoke(Args... args) noexcept
-		{
-			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
-			void* _rax;
-			asm("mov %%rax, %0": "=r"(_rax));
-			#elif defined (__aarch64__)
-			void* _rax;
-			asm("mov %[out], x10": [out]"=r"(_rax));
-			#else
-			void* _rax = _asm_get_rax();
-			#endif
-
-			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_rax);
-
-			return (*_this)(args...);
-		}
-#endif
-
 		void* operator new(std::size_t size)
 		{
 			return ExecutableAllocator{}.allocate(size);
@@ -111,7 +92,10 @@ namespace trampoline
 #ifdef _M_IX86
 			if constexpr (use_stdcall)
 			{
-				setup_trampoline(reinterpret_cast<void*>(&stdcall_do_invoke));
+				auto call_op_func = &dynamic_function::operator();
+				void* raw;
+				memcpy(&raw, &call_op_func, sizeof(raw));
+				setup_trampoline(raw);
 			}
 			else
 #endif

@@ -3,7 +3,7 @@
 
 .data
 
-CODE_LEN EQU 16
+CODE_LEN EQU 24
 
 trampoline_entry_code_length DWORD CODE_LEN
 
