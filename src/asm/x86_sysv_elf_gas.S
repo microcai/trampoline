@@ -4,13 +4,11 @@
 .align 16
 trampoline_entry:
     call get_eip
-    pop %ecx // this is the return address
-    push %eax // this is the this address, pushed as first argument
-    push %ecx // this is the return address pushed again
-	jmp * (jmp_target-trampoline_entry) (%eax)
+    mov %ecx, %eax
+	jmp * (jmp_target-trampoline_entry) (%ecx)
 get_eip:
-    mov (%esp), %eax // 3 字节
-    sub $5 , %eax // 3 字节
+    mov (%esp), %ecx // 3 字节
+    sub $5 , %ecx // 3 字节
     ret
 .space TRAMPOLINE_OFFSEET - (. - trampoline_entry), 0x90
 jmp_target:
@@ -26,7 +24,7 @@ trampoline_entry_point:
 
 _asm_get_rax:
     nop
-    mov -20(%ebp), %eax
+    mov %ecx, %eax
     ret
 
 .data

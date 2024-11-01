@@ -43,7 +43,7 @@ namespace trampoline
 
 		typedef R (*function_ptr)(Args...);
 
-		__NO_STACK_PROTECT static R do_invoke(Args... args) noexcept
+		static R do_invoke(Args... args) noexcept
 		{
 			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
 			void* _rax;
@@ -88,14 +88,7 @@ namespace trampoline
 
 		void attach_trampoline()
 		{
-#if defined (__i386__) && !defined(_MSC_VER)
-			R(dynamic_function:: * operator_call_ptr)(Args...) = &dynamic_function::operator();
-			void* ptr = nullptr;
-			memcpy(&ptr, &operator_call_ptr, sizeof(ptr));
-			setup_trampoline(ptr);
-#else
 			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
-#endif
 		}
 
 		~dynamic_function()
