@@ -1,9 +1,10 @@
 
-.align 4
-_trampoline_entry_code_length:
-    mov x0, #16
-    ret
 
+.data
+.align 4
+_trampoline_entry_code_length: .quad 16
+
+.text
 .align 4
 _trampoline_entry_point:
     ADR x10, .

@@ -1,9 +1,9 @@
 
 .align 16
-trampoline_entry_code_length:
-    mov $16,%rax
-    ret
+.data
+trampoline_entry_code_length: .quad 16
 
+.text
 .align 16
 trampoline_entry_point:
     lea -7(%rip), %rax

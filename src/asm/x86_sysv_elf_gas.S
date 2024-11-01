@@ -1,11 +1,12 @@
 
-trampoline_entry_code_length:
-    mov $24,%eax
-    ret
+.data
+trampoline_entry_code_length: .quad 16
+
+.text
 
 trampoline_entry_point:
     call get_eip    //5 字节
-    mov %eax, -16(%esp)
+    mov %eax, -24(%esp)
 	jmpl * 24(%eax)
 get_eip:
     mov (%esp), %eax // 3 字节
@@ -26,7 +27,7 @@ get_eip:
     nop
 _asm_get_rax:
     nop
-    mov -12(%ebp), %eax
+    mov -20(%ebp), %eax
     ret
 
 
