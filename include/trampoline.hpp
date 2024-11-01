@@ -91,6 +91,16 @@ namespace trampoline
 		{
 			if constexpr (use_stdcall)
 			{
+				/*
+				 * c++ 对象使用 __thiscall, 如果 C 函数要求 __stdcall
+				 * 则 所有的参数，已经都在栈上。但是没有 this 。
+				 * __thiscall 和 __stdcall 的唯一区别就是，this 要在 ecx 寄存器
+				 * 里传递。剩下的都一样。包括栈清理也是 被调用者清理
+				 * 于是这里 汇编代码只要利用 trampoline 技术，找到 this 送入
+				 * ecx 寄存器，就可以直接调用签名和 C 函数一样的 operator()
+				 * 成员函数了。
+				 * 这样就可以不需要 do_invoke 的包装
+				 */
 				auto call_op_func = &dynamic_function::operator();
 				void* raw;
 				memcpy(&raw, &call_op_func, sizeof(raw));
@@ -98,6 +108,13 @@ namespace trampoline
 			}
 			else
 			{
+				/*
+				 * 调用方使用 cdecl 调用，而 operator() 的调用约定是 thiscall
+				 * 由于 cdecl 是调用方清栈，而 __thiscall 是被调用方清栈
+				 * 因此只能使用 do_invoke 中转。do_invoke 利用 trampoline
+				 * 技术获取 this 指针，然后调用 this->operator()
+				 * 避免 this->operator() 直接被调用而引起 调用约定不匹配
+				 */
 				setup_trampoline(reinterpret_cast<void*>(&do_invoke));
 			}
 		}
