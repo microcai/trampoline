@@ -6,6 +6,23 @@
 #include <cstdio>
 #include "trampoline.hpp"
 
+template <auto fn>
+struct ptr_deleter
+{
+    template <typename T>
+    constexpr void operator()(T* arg) const
+    {
+        fn(arg);
+    }
+};
+
+template <typename T, auto fn>
+using auto_raii = std::unique_ptr<T, ptr_deleter<fn>>;
+
+using WinHttpAutoHandle = auto_raii<void, [](HINTERNET h) {
+	WinHttpCloseHandle(h);
+}>;
+
 int main(int argc, char* argv[])
 {
 	// WinHTTP Sessions Overview | https://msdn.microsoft.com/en-us/library/windows/desktop/aa384270(v=vs.85).aspx
@@ -31,15 +48,18 @@ int main(int argc, char* argv[])
 			IN LPVOID lpvStatusInformation,
 			IN DWORD dwStatusInformationLength)
 		{
-			printf("http status change callback\n");
+			printf("http status change callback %d\n", dwInternetStatus);
 		});
 
 	WinHttpSetStatusCallback(hSession, status_cb, WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, NULL);
+
+	auto auto_close_session = WinHttpAutoHandle(hSession);
 
 	// Specify an HTTP server.
 	if (hSession)
 		hConnect = WinHttpConnect(hSession, L"microcai.org",
 			INTERNET_DEFAULT_HTTPS_PORT, 0);
+	auto auto_close_hConnect = WinHttpAutoHandle(hConnect);
 
 
 
@@ -49,6 +69,7 @@ int main(int argc, char* argv[])
 			NULL, WINHTTP_NO_REFERER,
 			WINHTTP_DEFAULT_ACCEPT_TYPES,
 			WINHTTP_FLAG_SECURE);
+	auto auto_close_hRequest = WinHttpAutoHandle(hRequest);
 
 
 	// Send a request.
@@ -95,11 +116,6 @@ int main(int argc, char* argv[])
 	// Report any errors.
 	if (!bResults)
 		printf("Error %d has occurred.\n", GetLastError());
-
-	// Close any open handles.
-	if (hRequest) WinHttpCloseHandle(hRequest);
-	if (hConnect) WinHttpCloseHandle(hConnect);
-	if (hSession) WinHttpCloseHandle(hSession);
 
 	return 0;
 }
