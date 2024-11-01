@@ -75,12 +75,7 @@ namespace trampoline
 			: parent(parent)
 			, user_function_no_this(std::forward<LambdaFunction>(lambda))
 		{
-			#if defined (__i386__)
-			R(dynamic_function::* operator_call_ptr)(Args...) = &dynamic_function::operator();
-			setup_trampoline(reinterpret_cast<const void*>(operator_call_ptr));
-			#else
-			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
-			#endif
+			attach_trampoline();
 		}
 
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
@@ -88,12 +83,19 @@ namespace trampoline
 			: parent(parent)
 			, user_function(std::forward<LambdaFunction>(lambda))
 		{
-			#if defined (__i386__)
-			R(dynamic_function::* operator_call_ptr)(Args...) = &dynamic_function::operator();
-			setup_trampoline(reinterpret_cast<void*>(operator_call_ptr));
-			#else
+			attach_trampoline();
+		}
+
+		void attach_trampoline()
+		{
+#if defined (__i386__) && !defined(_MSC_VER)
+			R(dynamic_function:: * operator_call_ptr)(Args...) = &dynamic_function::operator();
+			void* ptr = nullptr;
+			memcpy(&ptr, &operator_call_ptr, sizeof(ptr));
+			setup_trampoline(ptr);
+#else
 			setup_trampoline(reinterpret_cast<void*>(&do_invoke));
-			#endif
+#endif
 		}
 
 		~dynamic_function()
@@ -106,7 +108,7 @@ namespace trampoline
 			return reinterpret_cast<function_ptr>(reinterpret_cast<void*>(this->_jit_code));
 		}
 
-		__NO_STACK_PROTECT R operator()(Args... args) noexcept
+		R operator()(Args... args) noexcept
 		{
 			if (user_function)
 				return user_function(parent, args...);
