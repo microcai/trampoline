@@ -11,14 +11,9 @@ PUBLIC trampoline_entry_code_length
 
 .CODE
 
-_trampoline_entry_code_length proc public
-    mov eax, 16
-    ret
-_trampoline_entry_code_length endp
-
-_trampoline_entry_point proc public
+trampoline_code proc
     call get_eip
-    jmp  DWORD PTR[eax + 16]
+    jmp  DWORD PTR[eax + CODE_LEN]
 get_eip:
     mov eax, DWORD PTR [esp]
     sub  eax,5
@@ -28,10 +23,15 @@ get_eip:
     nop
     nop
     nop
-_trampoline_entry_point endp
+trampoline_code endp
 
-__asm_get_rax proc
+trampoline_entry_point proc public
+    lea eax, trampoline_code
     ret
-__asm_get_rax endp
+trampoline_entry_point endp
+
+_asm_get_rax proc
+    ret
+_asm_get_rax endp
 
 end

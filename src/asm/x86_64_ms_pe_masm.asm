@@ -10,12 +10,7 @@ PUBLIC trampoline_entry_code_length
 
 .code
 
-; trampoline_entry_code_length proc public
-;     mov rax, 16
-;     ret
-; trampoline_entry_code_length endp
-
-trampoline_entry_point proc public
+trampoline_code proc
     lea rax, $
     jmp QWORD PTR [rax+ CODE_LEN]
     nop
@@ -24,7 +19,13 @@ trampoline_entry_point proc public
     nop
     nop
     nop
+trampoline_code endp
+
+trampoline_entry_point proc public
+    lea rax, trampoline_code
+    ret
 trampoline_entry_point endp
+
 
 _asm_get_rax proc
     ret
