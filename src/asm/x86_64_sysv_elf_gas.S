@@ -4,11 +4,11 @@
 .text
 .align 16
 trampoline_entry:
-    lea -7(%rip), %rax
-    mov %rax, -16(%rsp)
-    jmp *TRAMPOLINE_OFFSEET(%rax)
+    mov trampoline_entry@GOTPCREL(%rip),%rax
+    jmp * (jump_table - trampoline_entry)(%rax)
 .space TRAMPOLINE_OFFSEET - (. - trampoline_entry), 0x90
-.quad 0xcc
+jump_table:
+    .space 8, 0xcc
     ret
 
 .align 4
