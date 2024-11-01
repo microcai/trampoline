@@ -11,7 +11,7 @@ PUBLIC trampoline_entry_code_length
 
 .CODE
 
-trampoline_code proc
+trampoline_code:
     call get_eip
     jmp  DWORD PTR[eax + CODE_LEN]
 get_eip:
@@ -23,7 +23,6 @@ get_eip:
     nop
     nop
     nop
-trampoline_code endp
 
 trampoline_entry_point proc public
     lea eax, trampoline_code

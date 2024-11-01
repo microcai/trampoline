@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(ASM_SRC "")
 
 if (MSVC)
-	add_link_options(/INCREMENTAL:NO)
 	add_link_options(/SAFESEH:NO)
 endif(MSVC)
 
