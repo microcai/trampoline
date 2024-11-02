@@ -25,10 +25,21 @@ get_eip:
     nop
     nop
 
-trampoline_entry_point proc public
-    lea eax, trampoline_code
+setup_trampoline proc public
+    enter 4, 0
+    push edi
+    push esi
+    mov edi, DWORD PTR [ebp + 8] ; <-- edi is now _jit_code
+    lea esi, trampoline_code ; < -- esi is now &trampoline_code
+    mov ecx, CODE_LEN
+    rep movsb
+    mov esi, DWORD PTR [ebp + 12] ; <-- esi is now call_target
+    mov DWORD PTR [edi], esi
+    pop esi
+    pop edi
+    leave
     ret
-trampoline_entry_point endp
+setup_trampoline endp
 
 _asm_get_rax proc
     ret

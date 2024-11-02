@@ -109,7 +109,7 @@ namespace trampoline
 			else
 			{
 #if defined (__i386__)
-				setup_trampoline(reinterpret_cast<void*>(&do_call));
+				setup_trampoline(reinterpret_cast<void*>(&dynamic_function::do_call));
 #else
 				/*
 				 * 调用方使用 cdecl 调用，而 operator() 的调用约定是 thiscall
@@ -118,7 +118,7 @@ namespace trampoline
 				 * 技术获取 this 指针，然后调用 this->operator()
 				 * 避免 this->operator() 直接被调用而引起 调用约定不匹配
 				 */
-				setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+				setup_trampoline(reinterpret_cast<void*>(&dynamic_function::do_invoke));
 #endif
 			}
 		}

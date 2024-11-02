@@ -3,7 +3,7 @@
 
 extern "C" // from assembly code
 {
-#if defined (__i386__)
+#if defined (__i386__) || defined(_M_IX86)
 	extern void* setup_trampoline(void* jit_code_address, const void* call_target);
 #else
 	extern void* trampoline_entry_point();
@@ -13,7 +13,7 @@ extern "C" // from assembly code
 
 void trampoline::dynamic_function_base_trampoline::setup_trampoline(const void* wrap_func_ptr)
 {
-#if defined (__i386__)
+#if defined (__i386__) || defined(_M_IX86)
 	::setup_trampoline(_jit_code, wrap_func_ptr);
 #else
 	auto code_len = trampoline_entry_code_length;
