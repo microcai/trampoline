@@ -130,7 +130,6 @@ namespace trampoline
 
 		static R do_call(void* _this, void* ret, Args... args)
 		{
-			printf("do_call invoked on %p, ret to %p\n", _this, ret);
 			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
 		}
 
