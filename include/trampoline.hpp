@@ -21,8 +21,41 @@ namespace trampoline
 	class dynamic_function_base_trampoline
 	{
 	protected:
-		unsigned char _jit_code[64];
+		static constexpr long _jit_code_size = 64;
+
+		unsigned char _jit_code[4000];
+		int m_current_alloca = 64;
 		void  setup_trampoline(const void* wrap_func_ptr);
+
+		struct once_allocator
+		{
+			dynamic_function_base_trampoline* parent;
+			void* allocate(int size) {return parent->allocate_from_jit_code(size); }
+			void deallocate(void* ptr, int s)
+			{
+				// 不释放！
+			}
+
+			once_allocator()
+				: parent(nullptr)
+			{}
+
+			once_allocator(dynamic_function_base_trampoline* parent)
+				: parent(parent)
+			{}
+
+		};
+
+		void* allocate_from_jit_code(int size)
+		{
+			// up cast to 64 bytes boundry
+			size = (size / 64 + 1) * 64;
+			auto old_pos = m_current_alloca;
+			m_current_alloca += size;
+			return _jit_code + old_pos;
+		}
+
+		// char* alloc
 	};
 
 	template<typename ParentClass, bool use_stdcall, typename R, typename... Args>
@@ -31,8 +64,8 @@ namespace trampoline
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
 
-		using user_function_no_this_type = dr::function<R(Args...)>;
-		using user_function_with_this_type = dr::function<R(ParentClass*, Args...)>;
+		using user_function_no_this_type = dr::function<R(Args...), once_allocator>;
+		using user_function_with_this_type = dr::function<R(ParentClass*, Args...), once_allocator>;
 
 		void* operator new(std::size_t size)
 		{
@@ -47,7 +80,7 @@ namespace trampoline
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_no_this_type>
 		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
 			: parent(parent)
-			, user_function_no_this(std::forward<LambdaFunction>(lambda))
+			, user_function_no_this(std::forward<LambdaFunction>(lambda), once_allocator{this})
 		{
 			attach_trampoline();
 		}
@@ -55,7 +88,7 @@ namespace trampoline
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
 		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
 			: parent(parent)
-			, user_function(std::forward<LambdaFunction>(lambda))
+			, user_function(std::forward<LambdaFunction>(lambda), once_allocator{this})
 		{
 			attach_trampoline();
 		}
