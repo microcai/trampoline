@@ -12,16 +12,8 @@ int test_once_callback(callback_function_t cb)
 
 int test_multi_callback(callback_function_t cb)
 {
-    void* esp = nullptr;
-    asm("mov %%esp, %0": "=r"(esp));
-    printf("about to call %p, with esp = %p\n", cb, esp);
     cb(33, 0, 1222.0f);
-    asm("mov %%esp, %0": "=r"(esp));
-    printf("return from %p, with esp = %p\n", cb, esp);
-    cb(1, 0, 2333.0f);
-    printf("2 return from %p, with esp = %p\n", cb, esp);
-
-    return 0;
+    return cb(1, 0, 2333.0f);
 }
 
 int main()
