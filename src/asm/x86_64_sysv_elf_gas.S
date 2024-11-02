@@ -1,5 +1,5 @@
 
-.set TRAMPOLINE_OFFSEET, 16
+.set TRAMPOLINE_OFFSEET, 24
 
 .text
 .align 16
