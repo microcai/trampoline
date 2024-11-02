@@ -44,9 +44,9 @@ namespace trampoline
 		using user_function_no_this_type = std::function<R(Args...)>;
 		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
 
-		static R do_invoke(Args... args) noexcept
+		__NO_STACK_PROTECT static R do_invoke(Args... args) noexcept
 		{
-			#if defined (__linux__) && defined (__GNUC__) && defined (__x86_64__)
+			#if defined (__linux__) && defined (__x86_64__)
 			void* _rax;
 			asm("mov %%rax, %0": "=r"(_rax));
 			#elif defined (__aarch64__)
