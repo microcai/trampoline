@@ -12,7 +12,7 @@
 #ifdef __MSC_VER
 #define __NO_STACK_PROTECT __declspec(safebuffers)
 #elif defined(__GNUC__) || defined(__clang__)
-#define __NO_STACK_PROTECT __attribute__((no_stack_protector))
+#define __NO_STACK_PROTECT  // __attribute__((no_stack_protector))
 #else
 #define __NO_STACK_PROTECT
 #endif
@@ -44,12 +44,9 @@ namespace trampoline
 		using user_function_no_this_type = std::function<R(Args...)>;
 		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
 
-		__NO_STACK_PROTECT static R do_invoke(Args... args) noexcept
+		static R do_invoke(Args... args) noexcept
 		{
-			#if defined (__linux__) && defined (__x86_64__)
-			void* _rax;
-			asm("mov %%rax, %0": "=r"(_rax));
-			#elif defined (__aarch64__)
+			#if defined (__aarch64__)
 			void* _rax;
 			asm("mov %[out], x10": [out]"=r"(_rax));
 			#else
@@ -128,7 +125,7 @@ namespace trampoline
 			ExecutableAllocator{}.unprotect(this, sizeof (*this));
 		}
 
-		__NO_STACK_PROTECT static R do_call(void* _this, void* ret, Args... args)
+		static R do_call(void* _this, void* ret, Args... args)
 		{
 			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
 		}
@@ -138,7 +135,7 @@ namespace trampoline
 			return reinterpret_cast<void*>(this->_jit_code);
 		}
 
-		__NO_STACK_PROTECT R operator()(Args... args) noexcept
+		R operator()(Args... args) noexcept
 		{
 			if (user_function)
 				return user_function(parent, args...);

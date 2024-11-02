@@ -5,6 +5,7 @@
 .align 16
 trampoline_entry:
     mov trampoline_entry@GOTPCREL(%rip),%rax
+    mov %rax, %r10
     jmp * (jump_table - trampoline_entry)(%rax)
 .space TRAMPOLINE_OFFSEET - (. - trampoline_entry), 0x90
 jump_table:
@@ -19,6 +20,7 @@ trampoline_entry_code_length: .quad TRAMPOLINE_OFFSEET
 .align 16
 .global _asm_get_rax
 _asm_get_rax:
+    mov %r10, %rax
     ret
 
 .align 4

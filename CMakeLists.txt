@@ -68,6 +68,8 @@ endif()
 
 list(APPEND ASM_SRC src/asm/${ARCH}_${SYSABI}_${EXEUCTABLEFORMAT}_${ASSEMBLER}.${ASM_FILE_EXT})
 
+add_compile_options(-fstack-protector-all)
+
 add_library(trampoline  include/trampoline.hpp include/executable_allocator.hpp include/scoped_exit.hpp src/executable_allocator.cpp src/trampoline.cpp ${ASM_SRC})
 
 target_include_directories(trampoline PUBLIC include)

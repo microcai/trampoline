@@ -12,6 +12,7 @@ PUBLIC trampoline_entry_code_length
 
 trampoline_code:
     lea rax, $
+    mov r10, rax
     jmp QWORD PTR [rax+ CODE_LEN]
     nop
     nop
@@ -27,6 +28,7 @@ trampoline_entry_point endp
 
 
 _asm_get_rax proc
+    mov rax, r10
     ret
 _asm_get_rax endp
 
