@@ -128,7 +128,7 @@ namespace trampoline
 			ExecutableAllocator{}.unprotect(this, sizeof (*this));
 		}
 
-		static R do_call(void* _this, void* ret, Args... args)
+		__NO_STACK_PROTECT static R do_call(void* _this, void* ret, Args... args)
 		{
 			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
 		}
@@ -138,7 +138,7 @@ namespace trampoline
 			return reinterpret_cast<void*>(this->_jit_code);
 		}
 
-		R operator()(Args... args) noexcept
+		__NO_STACK_PROTECT R operator()(Args... args) noexcept
 		{
 			if (user_function)
 				return user_function(parent, args...);
