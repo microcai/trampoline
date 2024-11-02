@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "./executable_allocator.hpp"
+#include "./function.hpp"
 
 namespace trampoline
 {
@@ -30,8 +31,8 @@ namespace trampoline
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
 
-		using user_function_no_this_type = std::function<R(Args...)>;
-		using user_function_with_this_type = std::function<R(ParentClass*, Args...)>;
+		using user_function_no_this_type = dr::function<R(Args...)>;
+		using user_function_with_this_type = dr::function<R(ParentClass*, Args...)>;
 
 		void* operator new(std::size_t size)
 		{
