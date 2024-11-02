@@ -5,9 +5,9 @@
 // typedef int ( __stdcall * callback_function_t)(int, void*, float);
 typedef int ( * callback_function_t)(int, void*, float);
 
-int test_once_callback(callback_function_t cb)
+int test_once_callback(callback_function_t cb, int d)
 {
-    return cb(1, 0, 2.0f);
+    return cb(d, 0, 2.0f);
 }
 
 int test_multi_callback(callback_function_t cb)
@@ -38,7 +38,7 @@ int main()
 
         // return test_multi_callback(test_cb); <---- this will crash!
 
-        return test_once_callback(*test_cb3);
+        return test_once_callback(*test_cb3, arg1);
     });
 
     return test_multi_callback(test_cb2);
