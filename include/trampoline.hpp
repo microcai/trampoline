@@ -31,7 +31,7 @@ namespace trampoline
 	class dynamic_function_base_trampoline
 	{
 	protected:
-		unsigned char _jit_code[32];
+		unsigned char _jit_code[64];
 		void  setup_trampoline(const void* wrap_func_ptr);
 	};
 
@@ -108,6 +108,9 @@ namespace trampoline
 			}
 			else
 			{
+#if defined (__i386__)
+				setup_trampoline(reinterpret_cast<void*>(&do_call));
+#else
 				/*
 				 * 调用方使用 cdecl 调用，而 operator() 的调用约定是 thiscall
 				 * 由于 cdecl 是调用方清栈，而 __thiscall 是被调用方清栈
@@ -116,12 +119,19 @@ namespace trampoline
 				 * 避免 this->operator() 直接被调用而引起 调用约定不匹配
 				 */
 				setup_trampoline(reinterpret_cast<void*>(&do_invoke));
+#endif
 			}
 		}
 
 		~dynamic_function()
 		{
 			ExecutableAllocator{}.unprotect(this, sizeof (*this));
+		}
+
+		static R do_call(void* _this, void* ret, Args... args)
+		{
+			printf("do_call invoked on %p, ret to %p\n", _this, ret);
+			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
 		}
 
 		void* raw_function_ptr()

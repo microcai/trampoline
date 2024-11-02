@@ -1,39 +1,55 @@
 
-.set TRAMPOLINE_OFFSEET, 24
+.set TRAMPOLINE_OFFSEET, 32
+
+.text
+.align 16
+clean_up_ret:
+    add $4, %esp
+    ret
+
+.align 4
+.global setup_trampoline
+setup_trampoline:
+    enter $4, $0
+    // ebp+8 = 参数1
+    // ebp+12 = 参数2
+    push %edi
+    push %esi
+    mov 8(%ebp),%edi // <-- edi is now _jit_code
+    lea trampoline_entry@GOTOFF(%ebx),%esi // esi is now &trampoline_entry
+    mov $(TRAMPOLINE_OFFSEET), %ecx // ecx is now size of trampoline_entry
+    rep movsb
+    mov 12(%ebp),%esi // <-- esi is now call_target
+    movl %esi, (%edi)
+    add $4, %edi
+    lea clean_up_ret@GOTOFF(%ebx),%esi // esi is now &trampoline_entry
+    movl %esi, (%edi)
+    pop %esi
+    pop %edi
+    leave
+    ret
 
 .align 16
 trampoline_entry:
     call get_eip
-    mov %ecx, %eax
-	jmp * (jmp_target-trampoline_entry) (%ecx)
+    push %eax // this
+    mov  (clean_up_ret_address_label-trampoline_entry)(%eax), %ecx
+    push %ecx
+	jmp *TRAMPOLINE_OFFSEET(%eax)
+    nop
+    nop
+    nop
 get_eip:
-    mov (%esp), %ecx // 3 字节
-    sub $5 , %ecx // 3 字节
+    mov (%esp), %eax // 3 字节
+    sub $5 , %eax // 3 字节
     ret
 .space TRAMPOLINE_OFFSEET - (. - trampoline_entry), 0x90
 jmp_target:
 .space 4, 0xcc
+clean_up_ret_address_label:
+.space 4, 0xcc
     nop
     ret
-
-.align 4
-.global trampoline_entry_point
-trampoline_entry_point:
-    lea trampoline_entry@GOTOFF(%ebx),%eax
-    ret
-
-_asm_get_rax:
-    nop
-    mov %ecx, %eax
-    ret
-
-.data
-trampoline_entry_code_length: .quad TRAMPOLINE_OFFSEET
-
-.text
-
-.global trampoline_entry_code_length
-.global _asm_get_rax
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
