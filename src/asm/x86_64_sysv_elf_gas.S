@@ -10,12 +10,6 @@ trampoline_entry:
 .space TRAMPOLINE_OFFSEET - (. - trampoline_entry), 0x90
 jump_table:
     .space 8, 0xcc
-    ret
-
-.align 4
-.text
-trampoline_entry_code_length: .quad TRAMPOLINE_OFFSEET
-.global trampoline_entry_code_length
 
 .align 16
 .global _asm_get_rax
@@ -24,10 +18,20 @@ _asm_get_rax:
     ret
 
 .align 4
-.global trampoline_entry_point
-trampoline_entry_point:
-    mov trampoline_entry@GOTPCREL(%rip),%rax
+.global setup_trampoline
+setup_trampoline:
+    enter $8, $0
+    // rdi = 参数1 _jit_code
+    // rsi = 参数2 call_target
+    mov %rsi, %r10
+    mov trampoline_entry@GOTPCREL(%rip),%rsi // rsi is now &trampoline_entry
+    mov $(TRAMPOLINE_OFFSEET), %rcx // rcx is now size of trampoline_entry
+    rep movsb
+    mov %r10,%rsi // <-- rsi is now call_target
+    mov %rsi, (%rdi)
+    leave
     ret
+
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
