@@ -26,7 +26,8 @@ get_eip:
     nop
 
 generate_trampoline proc public
-    enter 0, 0
+    push ebp
+    mov  ebp, esp
     push edi
     push esi
     mov edi, DWORD PTR [ebp + 8] ; <-- edi is now _jit_code
