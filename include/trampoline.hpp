@@ -118,6 +118,18 @@ namespace trampoline
 		__attribute__((regparm(1)))
 		static R _callback_trunk_cdecl_x86(void* _this, Args... args)
 		{
+			// 使用了 __attribute__((regparm(1))) 后
+			// _callback_trunk_cdecl_x86 会认为第一个参数，是用 EAX 寄存器传递的
+			// 剩下的参数，用栈传递
+			// 于是，除了 _this 直接等于 EAX 寄存器的数值，这个函数的调用约定本质上
+			// 和  R(Args...) 是一模一样的！
+			// 也就是通过编译器白嫖了一个 _this 参数
+			// 于是就免去了对 _asm_get_this_pointer 的调用
+			// 并且编译器生成的 prologue 会绝对避开 EAX 寄存器
+			// 这正是之前的版本里莫名其妙的 崩溃 的由来。
+			// 原来 EAX 会在 prologue 里，调用 _asm_get_this_pointer 前就被污染
+			// 所以改用 __attribute__((regparm(1))) 就避免了 EAX 被污染
+			// 而且让编译器绝对的相信 EAX 是 this
 			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(args...);
 		}
 #endif
