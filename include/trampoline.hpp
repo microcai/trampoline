@@ -61,7 +61,7 @@ namespace trampoline
 	};
 
 	template<typename UserFunction, typename ParentClass , bool is_stdcall, typename R, typename... Args>
-	class dynamic_function : public dynamic_function_base
+	struct dynamic_function : public dynamic_function_base
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
@@ -144,27 +144,22 @@ namespace trampoline
 			}
 		}
 
-		friend ParentClass;
-		friend std::unique_ptr<dynamic_function>::deleter_type;
-
 		ParentClass* parent;
 		UserFunction user_function;
 	};
 
-	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr
+	template <bool use_stdcall, typename function_ptr_t, typename DerivedClass, typename UserFunction, typename R, typename... Args>
+	struct c_function_ptr_base : public c_function_ptr
 	{
-		typedef R (*function_ptr_t)(Args...);
-
-		using wrapper_class = dynamic_function<UserFunction, c_function_ptr_impl, false, R, Args...>;
+		using wrapper_class = dynamic_function<UserFunction, DerivedClass, use_stdcall, R, Args...>;
 
 		std::unique_ptr<wrapper_class> _impl;
 
-		c_function_ptr_impl(c_function_ptr_impl&&) = default;
-		c_function_ptr_impl(const c_function_ptr_impl&) = delete;
+		c_function_ptr_base(c_function_ptr_base&&) = default;
+		c_function_ptr_base(const c_function_ptr_base&) = delete;
 
-		explicit c_function_ptr_impl(UserFunction&& lambda)
-			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
+		explicit c_function_ptr_base(UserFunction&& lambda)
+			: _impl(new wrapper_class(reinterpret_cast<DerivedClass*>(this), std::forward<UserFunction>(lambda)))
 		{
 		}
 
@@ -177,47 +172,29 @@ namespace trampoline
 		{
 			return get_function_pointer();
 		}
+
 	};
 
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R (*)(Args...), UserFunction> : public c_function_ptr_impl<R(Args...), UserFunction>
+	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>
 	{
-		using c_function_ptr_impl<R(Args...), UserFunction>::c_function_ptr_impl;
+		typedef R (*function_ptr_t)(Args...);
+		using c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>::c_function_ptr_base;
+	};
+
+	template<typename UserFunction, typename R, typename... Args>
+	struct c_function_ptr_impl<R(*)(Args...), UserFunction> : public c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>
+	{
+		typedef R (*function_ptr_t)(Args...);
+		using c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 
 #ifdef _M_IX86
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_stdcall_function_ptr<R(Args...), UserFunction> : public c_function_ptr_base
+	struct c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction> : public c_function_ptr_base<true, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>
 	{
-		typedef R ( __stdcall *function_ptr_t)(Args...);
-
-		using wrapper_class = dynamic_function<UserFunction, c_stdcall_function_ptr, true, R, Args...>;
-
-		std::unique_ptr<wrapper_class> _impl;
-
-		c_function_ptr_impl(c_stdcall_function_ptr&&) = default;
-		c_function_ptr_impl(const c_stdcall_function_ptr&) = delete;
-
-		explicit c_stdcall_function_ptr(UserFunction&& lambda)
-			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
-		{
-		}
-
-		function_ptr_t get_function_pointer()
-		{
-			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
-		}
-
-		operator function_ptr_t()
-		{
-			return get_function_pointer();
-		}
-	};
-
-	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr<UserFunction, R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<UserFunction, R(Args...)>
-	{
-		using c_stdcall_function_ptr<R(Args...)>::c_stdcall_function_ptr;
+		typedef R (__stdcall *function_ptr_t)(Args...);
+		using c_function_ptr_base<true, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 #endif
 
