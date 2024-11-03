@@ -241,23 +241,9 @@ namespace trampoline
 #endif
 
 	template<typename  CallbackSignature, typename RealCallable>
-	auto make_once_function(RealCallable&& callable)
+	auto new_function(RealCallable&& callable)
 	{
-		struct function_wrapper
-		{
-			c_function_ptr<true, CallbackSignature>* wrappered_function;
-
-			using function_ptr_t = typename c_function_ptr<true, CallbackSignature>::function_ptr_t;
-
-			operator function_ptr_t()
-			{
-				return static_cast<function_ptr_t>(*wrappered_function);
-			}
-		};
-
-		auto dynamic_allocated_function = new c_function_ptr<true, CallbackSignature>(std::forward<RealCallable>(callable));
-
-		return function_wrapper{dynamic_allocated_function};
+		return new c_function_ptr<true, CallbackSignature>(std::forward<RealCallable>(callable));
 	}
 
 	template<typename  CallbackSignature, typename RealCallable>
@@ -271,7 +257,18 @@ namespace trampoline
 		requires std::convertible_to<RealCallable, typename c_function_ptr<true, CallbackSignature>::user_function_type>
 	auto make_function(RealCallable&& callable)
 	{
-		return make_once_function<CallbackSignature>(std::forward<RealCallable>(callable));
+		struct function_wrapper
+		{
+			c_function_ptr<true, CallbackSignature>* wrappered_function;
+
+			using function_ptr_t = typename c_function_ptr<true, CallbackSignature>::function_ptr_t;
+
+			operator function_ptr_t()
+			{
+				return static_cast<function_ptr_t>(*wrappered_function);
+			}
+		};
+		return function_wrapper{ new_function<CallbackSignature>(std::forward<RealCallable>(callable)) };
 	}
 
 
