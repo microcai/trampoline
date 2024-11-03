@@ -1,7 +1,7 @@
 
 .text
 
-.align 4
+.align 64
 .global generate_trampoline
 generate_trampoline:
     call get_eip
@@ -20,7 +20,7 @@ generate_trampoline:
     rep movsb
     mov 12(%ebp),%esi // <-- esi is now call_target
     mov %esi, (%edi)
-    mov $(jmp_target - end_of_trampoline_entry), %eax
+    mov $(end_of_trampoline_entry - trampoline_entry), %eax
     pop %ebx
     leave
     ret
@@ -30,6 +30,7 @@ trampoline_entry:
     call get_eip
     sub $5 , %eax // 3 字节
     jmp * (jmp_target - trampoline_entry)(%eax)
+.align 4
 get_eip:
     mov (%esp), %eax // 3 字节
     ret

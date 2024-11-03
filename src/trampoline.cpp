@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include "trampoline.hpp"
 
 extern "C" // from assembly code
@@ -9,9 +10,6 @@ extern "C" // from assembly code
 void trampoline::dynamic_function_base::generate_trampoline(const void* wrap_func_ptr)
 {
 	auto code_size = ::generate_trampoline(_jit_code, wrap_func_ptr);
-	if (code_size > _jit_code_size)
-	{
-		m_current_alloca = (code_size /64 +1) * 64;
-	}
+	assert(code_size <= _jit_code_size);
 	ExecutableAllocator{}.protect(this, sizeof (*this));
 }

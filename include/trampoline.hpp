@@ -35,7 +35,6 @@ namespace trampoline
 		static constexpr long _jit_code_size = 64;
 
 		unsigned char _jit_code[_jit_code_size];
-		int m_current_alloca = _jit_code_size;
 		void generate_trampoline(const void* wrap_func_ptr);
 
 		void* operator new(std::size_t size)
