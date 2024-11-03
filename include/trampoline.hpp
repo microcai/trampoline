@@ -134,8 +134,12 @@ namespace trampoline
 #endif
 		static R _callback_trunk_cdecl(Args... args) noexcept
 		{
+#if defined(_MSC_VER) && defined(_M_IX86)
+			dynamic_function* _this;
+			__asm { mov _this, ecx};
+#else
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
-
+#endif
 			return _this->call_user_function(args...);
 		}
 
