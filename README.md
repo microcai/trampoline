@@ -9,13 +9,13 @@ typedef int (* callback_function_t)(int, void*, float);
 int test_callback(callback_function_t cb)
 {
     int i = 0;
-    while (cb(i, 0, i));
+    while (cb(i, 0, i)) i++;
     return 0;
 }
 
 int test_once_callback(callback_function_t cb)
 {
-    return cb(i, 0, i)
+    return cb(0, 0, 0);
 }
 
 int main()
@@ -26,7 +26,9 @@ int main()
         {
             std::cout << happy << " world " << arg3 << std::endl;
 
-            return 0;
+            if (arg1 > 100)
+                return 0;
+            return 1;
         }
     );
 
@@ -44,8 +46,8 @@ int main()
         }
     );
 
-    test_once_callback(test_once_cb_auto_delete);
-
+    test_once_callback(*test_once_cb_auto_delete);
+    return 0;
 }
 ```
 
