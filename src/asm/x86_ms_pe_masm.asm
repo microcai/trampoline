@@ -41,8 +41,8 @@ setup_trampoline proc public
     ret
 setup_trampoline endp
 
-_asm_get_rax proc
+_asm_get_this_pointer proc
     ret
-_asm_get_rax endp
+_asm_get_this_pointer endp
 
 end

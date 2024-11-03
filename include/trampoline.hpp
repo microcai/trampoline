@@ -9,7 +9,7 @@
 
 namespace trampoline
 {
-	extern "C" void * _asm_get_rax();
+	extern "C" void * _asm_get_this_pointer();
 
 	////////////////////////////////////////////////////////////////////
 	template<typename Signature>
@@ -131,7 +131,7 @@ namespace trampoline
 
 		static R cdecl_generic_call(Args... args) noexcept
 		{
-			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_rax());
+			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
 
 			return (*_this)(args...);
 		}

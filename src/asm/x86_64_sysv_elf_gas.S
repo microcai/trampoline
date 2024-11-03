@@ -29,8 +29,8 @@ jump_address: // 保留 8 个字节的空间，setup_trampoline 会在此处填�
 end_of_trampoline_callback_entry:
 
 
-.global _asm_get_rax
-_asm_get_rax:
+.global _asm_get_this_pointer
+_asm_get_this_pointer:
     // cdecl_generic_call(Args...) 会调用此 api
     // 获取 r10 寄存器的值，从而获取 _jit_code 的地址
     // 这个地址，就是 dynamic_function 的 this

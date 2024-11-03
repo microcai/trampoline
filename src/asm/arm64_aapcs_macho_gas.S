@@ -15,8 +15,8 @@ dummy_ptr: .dword 0xcccccccc
     ret
 
 .align 4
-.global __asm_get_rax
-__asm_get_rax:
+.global __asm_get_this_pointer
+__asm_get_this_pointer:
     mov x0, x10
     ret
 
