@@ -4,19 +4,24 @@
 .align 4
 .global generate_trampoline
 generate_trampoline:
+    call get_eip
+    sub $5 , %eax // 3 字节
     push %ebp
     mov %esp, %ebp
     // ebp+8 = 参数1
     // ebp+12 = 参数2
     push %edi
     push %esi
+    push %ebx
+    mov %eax,%ebx
     mov 8(%ebp),%edi // <-- edi is now _jit_code
-    lea trampoline_entry@GOTOFF(%ebx),%esi // esi is now &trampoline_entry
+    lea (trampoline_entry - generate_trampoline)(%ebx), %esi // esi is now &trampoline_entry
     mov $(jmp_target - trampoline_entry), %ecx // ecx is now size of trampoline_entry
     rep movsb
     mov 12(%ebp),%esi // <-- esi is now call_target
     mov %esi, (%edi)
     mov $(jmp_target - end_of_trampoline_entry), %eax
+    pop %ebx
     leave
     ret
 
