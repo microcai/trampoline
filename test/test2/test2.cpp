@@ -1,7 +1,7 @@
 #include "trampoline.hpp"
 #include <iostream>
 
-typedef int (* callback_function_t)(int, void*, float);
+typedef int (* callback_function_t)(int, int, float);
 
 int test_callback(callback_function_t cb)
 {
@@ -19,7 +19,7 @@ int main()
 {
     std::string happy = "hello";
     auto test_cb = trampoline::c_function_ptr<callback_function_t>(
-        [=](int arg1, void* arg2, float arg3)
+        [=](int arg1, int arg2, float arg3)
         {
             std::cout << happy << " world " << arg3 << std::endl;
 
@@ -35,7 +35,7 @@ int main()
     // lambda 会多一个 self 参数.
     // c_function_ptr 会自动推导
     auto test_once_cb_auto_delete = new trampoline::c_function_ptr<callback_function_t>(
-        [=](auto self, int arg1, void* arg2, float arg3)
+        [=](auto self, int arg1, int arg2, float arg3)
         {
             std::unique_ptr<std::decay_t<decltype(*self)>> auto_delete(self);
             std::cout << happy << " once " << arg3 << std::endl;
