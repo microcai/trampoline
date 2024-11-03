@@ -28,7 +28,26 @@ namespace trampoline
 	template<typename Signature, typename UserFunction>
 	struct c_stdcall_function_ptr;
 
-	class dynamic_function_base;
+	struct dynamic_function_base;
+
+	enum calling_convertion
+	{
+		x86_cdecl,
+		x86_stdcall,
+		x64_msabi,
+		x64_sysvabi,
+		arm64_apcs,
+	};
+
+#if defined(_M_IX86) || defined(__i386__)
+	inline static constexpr auto default_calling_convertion = x86_cdecl;
+#elif defined(_MSC_VER) && defined(_M_AMD64)
+	inline static constexpr auto default_calling_convertion = x64_msabi;
+#elif defined(__x86_64__) || (_M_AMD64)
+	inline static constexpr auto default_calling_convertion = x64_sysvabi;
+#elif defined(__aarch64__)
+	inline static constexpr auto default_calling_convertion = arm64_apcs;
+#endif
 
 	struct dynamic_function_base
 	{
@@ -63,7 +82,7 @@ namespace trampoline
 		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
 	};
 
-	template<typename UserFunction, typename ParentClass , bool is_stdcall, typename R, typename... Args>
+	template<typename UserFunction, typename ParentClass , calling_convertion callabi, typename R, typename... Args>
 	struct dynamic_function : public dynamic_function_base
 	{
 		dynamic_function(dynamic_function&&) = delete;
@@ -80,7 +99,7 @@ namespace trampoline
 
 		void attach_trampoline()
 		{
-			if constexpr (is_stdcall)
+			if constexpr (callabi == x86_stdcall)
 			{
 				/*
 				 * c++ 对象使用 __thiscall, 如果 C 函数要求 __stdcall
@@ -98,18 +117,20 @@ namespace trampoline
 				memcpy(&raw, &call_op_func, sizeof(raw));
 				generate_trampoline(raw);
 			}
+#if defined (__i386__)
+			else if constexpr (callabi == x86_cdecl)
+			{
+				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl_x86));
+			}
+#endif
 			else
 			{
-#if defined (__i386__)
-				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl_x86));
-#else
 				/*
 				 * 调用方使用 cdecl 调用，而 call_user_function() 的调用约定是 thiscall
 				 * 调用约定不同，因此需要使用 _callback_trunk_cdecl 来“接收”调用方的参数
 				 * 然后再调用 call_user_function()
 				 */
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
-#endif
 			}
 		}
 
@@ -169,10 +190,10 @@ namespace trampoline
 		UserFunction user_function;
 	};
 
-	template <bool use_stdcall, typename function_ptr_t, typename DerivedClass, typename UserFunction, typename R, typename... Args>
+	template <calling_convertion callabi, typename function_ptr_t, typename DerivedClass, typename UserFunction, typename R, typename... Args>
 	struct c_function_ptr_base : public c_function_ptr
 	{
-		using wrapper_class = dynamic_function<UserFunction, DerivedClass, use_stdcall, R, Args...>;
+		using wrapper_class = dynamic_function<UserFunction, DerivedClass, callabi, R, Args...>;
 
 		std::unique_ptr<wrapper_class> _impl;
 
@@ -197,25 +218,25 @@ namespace trampoline
 	};
 
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>
+	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>
 	{
 		typedef R (*function_ptr_t)(Args...);
-		using c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>::c_function_ptr_base;
+		using c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R(*)(Args...), UserFunction> : public c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>
+	struct c_function_ptr_impl<R(*)(Args...), UserFunction> : public c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>
 	{
 		typedef R (*function_ptr_t)(Args...);
-		using c_function_ptr_base<false, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
+		using c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 
 #ifdef _M_IX86
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction> : public c_function_ptr_base<true, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>
+	struct c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction> : public c_function_ptr_base<x86_stdcall, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>
 	{
 		typedef R (__stdcall *function_ptr_t)(Args...);
-		using c_function_ptr_base<true, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
+		using c_function_ptr_base<x86_stdcall, R(__stdcall *)(Args...) , c_function_ptr_impl<R( __stdcall *)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 #endif
 
