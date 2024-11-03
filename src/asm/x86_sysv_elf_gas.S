@@ -16,7 +16,7 @@ generate_trampoline:
     rep movsb
     mov 12(%ebp),%esi // <-- esi is now call_target
     mov %esi, (%edi)
-    mov $(jmp_target - trampoline_entry), %eax
+    mov $(jmp_target - end_of_trampoline_entry), %eax
     leave
     ret
 
@@ -31,6 +31,8 @@ get_eip:
 .align 8
 jmp_target:
 .space 4, 0xcc
+end_of_trampoline_entry:
+
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
