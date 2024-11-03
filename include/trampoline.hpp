@@ -18,32 +18,23 @@ namespace trampoline
 	template<typename Signature>
 	struct c_stdcall_function_ptr;
 
-	class dynamic_function_base_trampoline
+	class dynamic_function_base
 	{
 	protected:
 		static constexpr long _jit_code_size = 64;
 
 		unsigned char _jit_code[4000];
-		int m_current_alloca = 64;
-		void  setup_trampoline(const void* wrap_func_ptr);
+		int m_current_alloca = _jit_code_size;
+		void generate_trampoline(const void* wrap_func_ptr);
 
 		struct once_allocator
 		{
-			dynamic_function_base_trampoline* parent;
-			void* allocate(int size) {return parent->allocate_from_jit_code(size); }
-			void deallocate(void* ptr, int s)
-			{
-				// 不释放！
-			}
-
-			once_allocator()
-				: parent(nullptr)
-			{}
-
-			once_allocator(dynamic_function_base_trampoline* parent)
-				: parent(parent)
-			{}
-
+			once_allocator();
+			once_allocator(dynamic_function_base* parent);
+			void* allocate(std::size_t size);
+			void deallocate(void* ptr, int s);
+		private:
+			dynamic_function_base* _parent;
 		};
 
 		void* allocate_from_jit_code(int size)
@@ -55,11 +46,11 @@ namespace trampoline
 			return _jit_code + old_pos;
 		}
 
-		// char* alloc
+		once_allocator get_allocator();
 	};
 
-	template<typename ParentClass, bool use_stdcall, typename R, typename... Args>
-	class dynamic_function : public dynamic_function_base_trampoline
+	template<typename ParentClass, bool is_stdcall, typename R, typename... Args>
+	class dynamic_function : public dynamic_function_base
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
@@ -80,7 +71,7 @@ namespace trampoline
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_no_this_type>
 		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
 			: parent(parent)
-			, user_function_no_this(std::forward<LambdaFunction>(lambda), once_allocator{this})
+			, user_function_no_this(std::forward<LambdaFunction>(lambda), get_allocator())
 		{
 			attach_trampoline();
 		}
@@ -88,14 +79,14 @@ namespace trampoline
 		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
 		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
 			: parent(parent)
-			, user_function(std::forward<LambdaFunction>(lambda), once_allocator{this})
+			, user_function(std::forward<LambdaFunction>(lambda), get_allocator())
 		{
 			attach_trampoline();
 		}
 
 		void attach_trampoline()
 		{
-			if constexpr (use_stdcall)
+			if constexpr (is_stdcall)
 			{
 				/*
 				 * c++ 对象使用 __thiscall, 如果 C 函数要求 __stdcall
@@ -103,37 +94,41 @@ namespace trampoline
 				 * __thiscall 和 __stdcall 的唯一区别就是，this 要在 ecx 寄存器
 				 * 里传递。剩下的都一样。包括栈清理也是 被调用者清理
 				 * 于是这里 汇编代码只要利用 trampoline 技术，找到 this 送入
-				 * ecx 寄存器，就可以直接调用签名和 C 函数一样的 operator()
+				 * ecx 寄存器，就可以直接调用签名和 C 函数一样的 call_user_function()
 				 * 成员函数了。
-				 * 这样就可以不需要 do_invoke 的包装
+				 * 这样就可以不需要 _callback_trunk_cdecl 的包装
 				 */
-				auto call_op_func = &dynamic_function::operator();
+				auto call_op_func = &dynamic_function::call_user_function;
 				void* raw;
+				static_assert(sizeof(call_op_func) == sizeof(raw), "member function pointer size assumption failed");
 				memcpy(&raw, &call_op_func, sizeof(raw));
-				setup_trampoline(raw);
+				generate_trampoline(raw);
 			}
 			else
 			{
 #if defined (__i386__)
-				setup_trampoline(reinterpret_cast<void*>(&dynamic_function::cdecl_x86_call));
+				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl_x86));
 #else
 				/*
-				 * 调用方使用 cdecl 调用，而 operator() 的调用约定是 thiscall
-				 * 由于 cdecl 是调用方清栈，而 __thiscall 是被调用方清栈
-				 * 因此只能使用 do_invoke 中转。do_invoke 利用 trampoline
-				 * 技术获取 this 指针，然后调用 this->operator()
-				 * 避免 this->operator() 直接被调用而引起 调用约定不匹配
+				 * 调用方使用 cdecl 调用，而 call_user_function() 的调用约定是 thiscall
+				 * 调用约定不同，因此需要使用 _callback_trunk_cdecl 来“接收”调用方的参数
+				 * 然后再调用 call_user_function()
 				 */
-				setup_trampoline(reinterpret_cast<void*>(&dynamic_function::cdecl_generic_call));
+				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
 #endif
 			}
 		}
 
-		static R cdecl_generic_call(Args... args) noexcept
+		static R _callback_trunk_cdecl_x86(void* _this, void* ret, Args... args)
+		{
+			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
+		}
+
+		static R _callback_trunk_cdecl(Args... args) noexcept
 		{
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
 
-			return (*_this)(args...);
+			return _this->call_user_function(args...);
 		}
 
 		~dynamic_function()
@@ -141,17 +136,12 @@ namespace trampoline
 			ExecutableAllocator{}.unprotect(this, sizeof (*this));
 		}
 
-		static R cdecl_x86_call(void* _this, void* ret, Args... args)
-		{
-			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
-		}
-
 		void* raw_function_ptr()
 		{
 			return reinterpret_cast<void*>(this->_jit_code);
 		}
 
-		R operator()(Args... args) noexcept
+		R call_user_function(Args... args) noexcept
 		{
 			if (user_function)
 				return user_function(parent, args...);

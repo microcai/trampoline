@@ -25,7 +25,7 @@ get_eip:
     nop
     nop
 
-setup_trampoline proc public
+generate_trampoline proc public
     enter 0, 0
     push edi
     push esi
@@ -37,9 +37,10 @@ setup_trampoline proc public
     mov DWORD PTR [edi], esi
     pop esi
     pop edi
+    mov eax, CODE_LEN + 4
     leave
     ret
-setup_trampoline endp
+generate_trampoline endp
 
 _asm_get_this_pointer proc
     ret

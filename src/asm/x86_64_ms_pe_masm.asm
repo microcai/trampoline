@@ -15,7 +15,7 @@ trampoline_code:
     nop
     nop
 
-setup_trampoline proc public
+generate_trampoline proc public
     enter 0, 0
     ; rcx = 参数1 _jit_code
     ; rdx = 参数2 call_target
@@ -29,9 +29,10 @@ setup_trampoline proc public
     mov [rdi], rdx
     pop rsi
     pop rdi
+    mov rax, CODE_LEN + 8
     leave
     ret
-setup_trampoline endp
+generate_trampoline endp
 
 
 _asm_get_this_pointer proc

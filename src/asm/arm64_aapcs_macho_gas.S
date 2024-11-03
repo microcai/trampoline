@@ -21,8 +21,8 @@ __asm_get_this_pointer:
     ret
 
 .align 4
-.global _setup_trampoline
-_setup_trampoline:
+.global _generate_trampoline
+_generate_trampoline:
     stp x29, x30, [sp, -32]!
     mov x29, sp
     stp x19, x20, [sp, 16]
@@ -34,4 +34,5 @@ _setup_trampoline:
     str x20, [x19, TRAMPOLINE_OFFSEET ]
     ldp x19, x20, [sp, 16]
     ldp x29, x30, [sp], 32
+    mov x0, #(TRAMPOLINE_OFFSEET + 8)
     ret

@@ -4,8 +4,8 @@
 .text
 
 .align 4
-.global setup_trampoline
-setup_trampoline:
+.global generate_trampoline
+generate_trampoline:
     enter $0, $0
     // ebp+8 = 参数1
     // ebp+12 = 参数2
@@ -22,6 +22,7 @@ setup_trampoline:
     movl %esi, (%edi)
     pop %esi
     pop %edi
+    mov $(TRAMPOLINE_OFFSEET +4), %eax
     leave
     ret
 
