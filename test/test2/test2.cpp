@@ -10,10 +10,7 @@ int test_callback(callback_function_t cb)
     return 0;
 }
 
-int test_once_callback(callback_function_t cb)
-{
-    return cb(0, 0, 0);
-}
+int test_once_callback(callback_function_t cb) { return cb(0, 0, 0); }
 
 int main()
 {
@@ -31,9 +28,27 @@ int main()
 
     test_callback(test_cb);
 
-    // 一次性回调，自动删除自身哦！
-    // lambda 会多一个 self 参数.
-    // make_function 会自动推导
+    // newed_function 是 new 出来的
+    // 为了不泄漏资源，需要 进行 delete 操作。
+    // 可以在回调里对 self 进行 delete
+    // lambda 会多一个 self 参数
+    // 因此本函数只能被调用一次
+    // 当然其实多调用也可以，就是对 self 的删除要选择合适的时机
+    auto newed_function = trampoline::new_function<callback_function_t>(
+        [=](auto self, int arg1, int arg2, float arg3)
+        {
+            std::unique_ptr<std::decay_t<decltype(*self)>> auto_delete(self);
+            std::cout << happy << " once " << arg3 << std::endl;
+            return 0;
+        }
+    );
+
+    // NOTE: 也可以这么使用
+    // test_once_callback(*newed_function);
+    test_once_callback(newed_function->get_function_pointer());
+
+    // 设置回调的时候，不想因为 new 出来的导致转换为 C 对象的时候要解引用，可以选这个版本
+    // 注意这个版本的 test_once_cb_auto_delete 也是个指针，也需要对 self 进行 delete
     auto test_once_cb_auto_delete = trampoline::make_function<callback_function_t>(
         [=](auto self, int arg1, int arg2, float arg3)
         {
@@ -44,5 +59,4 @@ int main()
     );
 
     test_once_callback(test_once_cb_auto_delete);
-    return 0;
 }

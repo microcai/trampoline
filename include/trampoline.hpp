@@ -185,9 +185,14 @@ namespace trampoline
 		c_function_ptr(c_function_ptr&&) = delete;
 		c_function_ptr(const c_function_ptr&) = delete;
 
-		operator function_ptr_t()
+		function_ptr_t get_function_pointer()
 		{
 			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
+		}
+
+		operator function_ptr_t()
+		{
+			return get_function_pointer();
 		}
 
 		~c_function_ptr()
@@ -222,9 +227,14 @@ namespace trampoline
 		c_stdcall_function_ptr(const c_stdcall_function_ptr&) = delete;
 
 
-		operator function_ptr_t()
+		function_ptr_t get_function_pointer()
 		{
 			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
+		}
+
+		operator function_ptr_t()
+		{
+			return get_function_pointer();
 		}
 
 		~c_stdcall_function_ptr()
