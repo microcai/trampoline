@@ -11,7 +11,10 @@ int test_callback(callback_function_t cb)
     return 0;
 }
 
-int test_once_callback(callback_function_t cb) { return cb(0, 0, 0); }
+int test_once_callback(callback_function_t cb)
+{
+    return cb(0, 0, 0);
+}
 
 int main()
 {

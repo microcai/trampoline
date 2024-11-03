@@ -10,7 +10,7 @@
 
 namespace trampoline
 {
-	extern "C" void * _asm_get_this_pointer();
+	extern "C" void * _asm_get_this_pointer() __attribute__((no_caller_saved_registers));
 
 	////////////////////////////////////////////////////////////////////
 	struct c_function_ptr
@@ -110,11 +110,13 @@ namespace trampoline
 			}
 		}
 
-		static R _callback_trunk_cdecl_x86(void* _this, void* ret, Args... args)
+#if defined (__i386__)
+		__attribute__((regparm(1)))
+		static R _callback_trunk_cdecl_x86(void* _this, Args... args)
 		{
-			return (*reinterpret_cast<dynamic_function*>(_this))(args...);
+			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(args...);
 		}
-
+#endif
 		static R _callback_trunk_cdecl(Args... args) noexcept
 		{
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
