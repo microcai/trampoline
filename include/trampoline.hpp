@@ -3,7 +3,8 @@
 
 #include <type_traits>
 #include <utility>
-#include <string.h>
+#include <memory>
+#include <cstring>
 
 #include "./executable_allocator.hpp"
 
@@ -32,6 +33,16 @@ namespace trampoline
 		unsigned char _jit_code[_jit_code_size];
 		int m_current_alloca = _jit_code_size;
 		void generate_trampoline(const void* wrap_func_ptr);
+
+		void* operator new(std::size_t size)
+		{
+			return ExecutableAllocator{}.allocate(size);
+		}
+
+		void operator delete(void* ptr, std::size_t size)
+		{
+			return ExecutableAllocator{}.deallocate(ptr, size);
+		}
 	};
 
 	template<typename ParentClass, typename UserFunction, typename Signature>
@@ -56,16 +67,6 @@ namespace trampoline
 		dynamic_function(dynamic_function&) = delete;
 
 		static bool constexpr hasParentClassArg = user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(Args...)>::value;
-
-		void* operator new(std::size_t size)
-		{
-			return ExecutableAllocator{}.allocate(size);
-		}
-
-		void operator delete(void* ptr, std::size_t size)
-		{
-			return ExecutableAllocator{}.deallocate(ptr, size);
-		}
 
 		dynamic_function(ParentClass* parent, UserFunction&& lambda)
 			: parent(parent)
@@ -144,6 +145,7 @@ namespace trampoline
 		}
 
 		friend ParentClass;
+		friend std::unique_ptr<dynamic_function>::deleter_type;
 
 		ParentClass* parent;
 		UserFunction user_function;
@@ -156,15 +158,15 @@ namespace trampoline
 
 		using wrapper_class = dynamic_function<UserFunction, c_function_ptr_impl, false, R, Args...>;
 
-		wrapper_class* _impl;
+		std::unique_ptr<wrapper_class> _impl;
+
+		c_function_ptr_impl(c_function_ptr_impl&&) = default;
+		c_function_ptr_impl(const c_function_ptr_impl&) = delete;
 
 		explicit c_function_ptr_impl(UserFunction&& lambda)
 			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
 		{
 		}
-
-		c_function_ptr_impl(c_function_ptr_impl&&) = delete;
-		c_function_ptr_impl(const c_function_ptr_impl&) = delete;
 
 		function_ptr_t get_function_pointer()
 		{
@@ -174,11 +176,6 @@ namespace trampoline
 		operator function_ptr_t()
 		{
 			return get_function_pointer();
-		}
-
-		~c_function_ptr_impl()
-		{
-			delete _impl;
 		}
 	};
 
@@ -196,16 +193,15 @@ namespace trampoline
 
 		using wrapper_class = dynamic_function<UserFunction, c_stdcall_function_ptr, true, R, Args...>;
 
-		wrapper_class* _impl;
+		std::unique_ptr<wrapper_class> _impl;
+
+		c_function_ptr_impl(c_stdcall_function_ptr&&) = default;
+		c_function_ptr_impl(const c_stdcall_function_ptr&) = delete;
 
 		explicit c_stdcall_function_ptr(UserFunction&& lambda)
 			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
 		{
 		}
-
-		c_stdcall_function_ptr(c_stdcall_function_ptr&&) = delete;
-		c_stdcall_function_ptr(const c_stdcall_function_ptr&) = delete;
-
 
 		function_ptr_t get_function_pointer()
 		{
@@ -215,11 +211,6 @@ namespace trampoline
 		operator function_ptr_t()
 		{
 			return get_function_pointer();
-		}
-
-		~c_stdcall_function_ptr()
-		{
-			delete _impl;
 		}
 	};
 
@@ -237,18 +228,19 @@ namespace trampoline
 	}
 
 	template<typename  CallbackSignature, typename RealCallable>
-		requires (!user_function_type_trait_has_parent_class<
+	concept has_self_as_first_arg = user_function_type_trait_has_parent_class<
 			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
-		>::value)
+		>::value;
+
+	template<typename  CallbackSignature, typename RealCallable>
+		requires (!has_self_as_first_arg<CallbackSignature, RealCallable>)
 	auto make_function(RealCallable&& callable)
 	{
 		return c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
 	template<typename  CallbackSignature, typename RealCallable>
-		requires (user_function_type_trait_has_parent_class<
-			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
-		>::value)
+		requires (has_self_as_first_arg<CallbackSignature, RealCallable>)
 	auto make_function(RealCallable&& callable)
 	{
 		struct function_wrapper
