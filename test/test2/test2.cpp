@@ -1,5 +1,6 @@
 #include "trampoline.hpp"
 #include <iostream>
+#include <memory>
 
 typedef int (* callback_function_t)(int, int, float);
 

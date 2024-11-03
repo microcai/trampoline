@@ -1,21 +1,26 @@
 
 #pragma once
 
-#include <functional>
+#include <type_traits>
+#include <utility>
 #include <string.h>
 
 #include "./executable_allocator.hpp"
-#include "./function.hpp"
 
 namespace trampoline
 {
 	extern "C" void * _asm_get_this_pointer();
 
 	////////////////////////////////////////////////////////////////////
-	template<bool dynamic, typename Signature>
-	struct c_function_ptr;
+	struct c_function_ptr
+	{
+		virtual ~c_function_ptr(){}
+	};
 
-	template<bool dynamic, typename Signature>
+	template<typename Signature, typename UserFunction>
+	struct c_function_ptr_impl;
+
+	template<typename Signature, typename UserFunction>
 	struct c_stdcall_function_ptr;
 
 	class dynamic_function_base;
@@ -24,54 +29,33 @@ namespace trampoline
 	{
 		static constexpr long _jit_code_size = 64;
 
-		unsigned char _jit_code[4000];
+		unsigned char _jit_code[_jit_code_size];
 		int m_current_alloca = _jit_code_size;
 		void generate_trampoline(const void* wrap_func_ptr);
-
-		struct once_allocator
-		{
-			once_allocator();
-			once_allocator(dynamic_function_base* parent);
-			void* allocate(std::size_t size);
-			void deallocate(void* ptr, int s);
-		private:
-			dynamic_function_base* _parent;
-		};
-
-		void* allocate_from_jit_code(int size)
-		{
-			// up cast to 64 bytes boundry
-			size = (size / 64 + 1) * 64;
-			auto old_pos = m_current_alloca;
-			m_current_alloca += size;
-			return _jit_code + old_pos;
-		}
-
-		once_allocator get_allocator();
 	};
 
-	template<typename ParentClass, bool hasParentClas, typename R, typename... Args>
-	struct user_function_type_trait;
+	template<typename ParentClass, typename UserFunction, typename Signature>
+	struct user_function_type_trait_has_parent_class;
 
-	template<typename ParentClass, typename R, typename... Args>
-	struct user_function_type_trait<ParentClass, true, R, Args...>
+	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
+	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(Args...)>
 	{
-		using user_function_type = dr::function<R(ParentClass*, Args...), dynamic_function_base::once_allocator>;
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
 	};
 
-	template<typename ParentClass, typename R, typename... Args>
-	struct user_function_type_trait<ParentClass, false, R, Args...>
+	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
+	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(*)(Args...)>
 	{
-		using user_function_type = dr::function<R(Args...), dynamic_function_base::once_allocator>;
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
 	};
 
-	template<typename ParentClass, bool hasParentClassArg, bool is_stdcall, typename R, typename... Args>
+	template<typename UserFunction, typename ParentClass , bool is_stdcall, typename R, typename... Args>
 	class dynamic_function : public dynamic_function_base
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
 
-		using user_function_type = typename user_function_type_trait<ParentClass, hasParentClassArg, R, Args...>::user_function_type;
+		static bool constexpr hasParentClassArg = user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(Args...)>::value;
 
 		void* operator new(std::size_t size)
 		{
@@ -83,10 +67,9 @@ namespace trampoline
 			return ExecutableAllocator{}.deallocate(ptr, size);
 		}
 
-		template<typename LambdaFunction>
-		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
+		dynamic_function(ParentClass* parent, UserFunction&& lambda)
 			: parent(parent)
-			, user_function(std::forward<LambdaFunction>(lambda), get_allocator())
+			, user_function(std::forward<UserFunction>(lambda))
 		{
 			attach_trampoline();
 		}
@@ -163,27 +146,25 @@ namespace trampoline
 		friend ParentClass;
 
 		ParentClass* parent;
-		user_function_type user_function;
+		UserFunction user_function;
 	};
 
-	template<bool dynamic, typename R, typename... Args>
-	struct c_function_ptr<dynamic, R(Args...)>
+	template<typename UserFunction, typename R, typename... Args>
+	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr
 	{
 		typedef R (*function_ptr_t)(Args...);
 
-		using wrapper_class = dynamic_function<c_function_ptr, dynamic, false, R, Args...>;
-		using user_function_type = typename wrapper_class::user_function_type;
+		using wrapper_class = dynamic_function<UserFunction, c_function_ptr_impl, false, R, Args...>;
 
 		wrapper_class* _impl;
 
-		template<typename LambdaFunction>
-		explicit c_function_ptr(LambdaFunction&& lambda)
-			: _impl(new wrapper_class(this, std::forward<LambdaFunction>(lambda)))
+		explicit c_function_ptr_impl(UserFunction&& lambda)
+			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
 		{
 		}
 
-		c_function_ptr(c_function_ptr&&) = delete;
-		c_function_ptr(const c_function_ptr&) = delete;
+		c_function_ptr_impl(c_function_ptr_impl&&) = delete;
+		c_function_ptr_impl(const c_function_ptr_impl&) = delete;
 
 		function_ptr_t get_function_pointer()
 		{
@@ -195,31 +176,30 @@ namespace trampoline
 			return get_function_pointer();
 		}
 
-		~c_function_ptr()
+		~c_function_ptr_impl()
 		{
 			delete _impl;
 		}
 	};
 
-	template<bool dynamic, typename R, typename... Args>
-	struct c_function_ptr<dynamic, R (*)(Args...)> : public c_function_ptr<dynamic, R(Args...)>
+	template<typename UserFunction, typename R, typename... Args>
+	struct c_function_ptr_impl<R (*)(Args...), UserFunction> : public c_function_ptr_impl<R(Args...), UserFunction>
 	{
-		using c_function_ptr<dynamic, R(Args...)>::c_function_ptr;
+		using c_function_ptr_impl<R(Args...), UserFunction>::c_function_ptr_impl;
 	};
 
 #ifdef _M_IX86
-	template<bool dynamic, typename R, typename... Args>
-	struct c_stdcall_function_ptr<dynamic, R(Args...)>
+	template<typename UserFunction, typename R, typename... Args>
+	struct c_stdcall_function_ptr<R(Args...), UserFunction> : public c_function_ptr_base
 	{
 		typedef R ( __stdcall *function_ptr_t)(Args...);
 
-		using wrapper_class = dynamic_function<c_stdcall_function_ptr, dynamic, true, R, Args...>;
+		using wrapper_class = dynamic_function<UserFunction, c_stdcall_function_ptr, true, R, Args...>;
 
 		wrapper_class* _impl;
 
-		template<typename LambdaFunction>
-		explicit c_stdcall_function_ptr(LambdaFunction&& lambda)
-			: _impl(new wrapper_class(this, std::forward<LambdaFunction>(lambda)))
+		explicit c_stdcall_function_ptr(UserFunction&& lambda)
+			: _impl(new wrapper_class(this, std::forward<UserFunction>(lambda)))
 		{
 		}
 
@@ -243,8 +223,8 @@ namespace trampoline
 		}
 	};
 
-	template<bool dynamic, typename R, typename... Args>
-	struct c_function_ptr<dynamic, R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<dynamic, R(Args...)>
+	template<typename UserFunction, typename R, typename... Args>
+	struct c_function_ptr<UserFunction, R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<UserFunction, R(Args...)>
 	{
 		using c_stdcall_function_ptr<R(Args...)>::c_stdcall_function_ptr;
 	};
@@ -253,25 +233,29 @@ namespace trampoline
 	template<typename  CallbackSignature, typename RealCallable>
 	auto new_function(RealCallable&& callable)
 	{
-		return new c_function_ptr<true, CallbackSignature>(std::forward<RealCallable>(callable));
+		return new c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
 	template<typename  CallbackSignature, typename RealCallable>
-		requires std::convertible_to<RealCallable, typename c_function_ptr<false, CallbackSignature>::user_function_type>
+		requires (!user_function_type_trait_has_parent_class<
+			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
+		>::value)
 	auto make_function(RealCallable&& callable)
 	{
-		return c_function_ptr<false, CallbackSignature>(std::forward<RealCallable>(callable));
+		return c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
 	template<typename  CallbackSignature, typename RealCallable>
-		requires std::convertible_to<RealCallable, typename c_function_ptr<true, CallbackSignature>::user_function_type>
+		requires (user_function_type_trait_has_parent_class<
+			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
+		>::value)
 	auto make_function(RealCallable&& callable)
 	{
 		struct function_wrapper
 		{
-			c_function_ptr<true, CallbackSignature>* wrappered_function;
+			c_function_ptr_impl<CallbackSignature, RealCallable>* wrappered_function;
 
-			using function_ptr_t = typename c_function_ptr<true, CallbackSignature>::function_ptr_t;
+			using function_ptr_t = typename c_function_ptr_impl<CallbackSignature, RealCallable>::function_ptr_t;
 
 			operator function_ptr_t()
 			{

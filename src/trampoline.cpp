@@ -15,25 +15,3 @@ void trampoline::dynamic_function_base::generate_trampoline(const void* wrap_fun
 	}
 	ExecutableAllocator{}.protect(this, sizeof (*this));
 }
-
-trampoline::dynamic_function_base::once_allocator::once_allocator()
-{}
-
-trampoline::dynamic_function_base::once_allocator::once_allocator(dynamic_function_base* parent)
-	: _parent(parent)
-{}
-
-void* trampoline::dynamic_function_base::once_allocator::allocate(std::size_t size)
-{
-	return _parent->allocate_from_jit_code(size);
-}
-
-void trampoline::dynamic_function_base::once_allocator::deallocate(void* ptr, int s)
-{
-	// do nothing !
-}
-
-trampoline::dynamic_function_base::once_allocator trampoline::dynamic_function_base::get_allocator()
-{
-	return trampoline::dynamic_function_base::once_allocator(this);
-}

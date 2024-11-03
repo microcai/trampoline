@@ -26,7 +26,7 @@ int main()
         // 这个 lambda 的 c_function_ptr 对象不是 new 出来的，因此可以不需要管理生命期
         std::cout << happy << " world " << arg3 << std::endl;
 
-        auto test_cb3 = trampoline::make_function<callback_function_t>([=](auto self, int arg1, void* arg2, float arg3)
+        auto test_cb3 = trampoline::make_function<callback_function_t>([=](trampoline::c_function_ptr* self, int arg1, void* arg2, float arg3)
         {
             // 这个 lambda 的 c_function_ptr 对象 new 出来的，
             // 因此需要第一个参数必须是 c_function_ptr* 类型，可以使用 auto 替代
