@@ -8,6 +8,10 @@
 
 #include "./executable_allocator.hpp"
 
+#ifdef _MSC_VER
+#define __attribute__(x)
+#endif
+
 namespace trampoline
 {
 	extern "C" void * _asm_get_this_pointer() __attribute__((no_caller_saved_registers));
