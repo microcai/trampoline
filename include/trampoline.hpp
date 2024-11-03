@@ -12,15 +12,16 @@ namespace trampoline
 	extern "C" void * _asm_get_this_pointer();
 
 	////////////////////////////////////////////////////////////////////
-	template<typename Signature>
+	template<bool dynamic, typename Signature>
 	struct c_function_ptr;
 
-	template<typename Signature>
+	template<bool dynamic, typename Signature>
 	struct c_stdcall_function_ptr;
 
-	class dynamic_function_base
+	class dynamic_function_base;
+
+	struct dynamic_function_base
 	{
-	protected:
 		static constexpr long _jit_code_size = 64;
 
 		unsigned char _jit_code[4000];
@@ -49,14 +50,28 @@ namespace trampoline
 		once_allocator get_allocator();
 	};
 
-	template<typename ParentClass, bool is_stdcall, typename R, typename... Args>
+	template<typename ParentClass, bool hasParentClas, typename R, typename... Args>
+	struct user_function_type_trait;
+
+	template<typename ParentClass, typename R, typename... Args>
+	struct user_function_type_trait<ParentClass, true, R, Args...>
+	{
+		using user_function_type = dr::function<R(ParentClass*, Args...), dynamic_function_base::once_allocator>;
+	};
+
+	template<typename ParentClass, typename R, typename... Args>
+	struct user_function_type_trait<ParentClass, false, R, Args...>
+	{
+		using user_function_type = dr::function<R(Args...), dynamic_function_base::once_allocator>;
+	};
+
+	template<typename ParentClass, bool hasParentClassArg, bool is_stdcall, typename R, typename... Args>
 	class dynamic_function : public dynamic_function_base
 	{
 		dynamic_function(dynamic_function&&) = delete;
 		dynamic_function(dynamic_function&) = delete;
 
-		using user_function_no_this_type = dr::function<R(Args...), once_allocator>;
-		using user_function_with_this_type = dr::function<R(ParentClass*, Args...), once_allocator>;
+		using user_function_type = typename user_function_type_trait<ParentClass, hasParentClassArg, R, Args...>::user_function_type;
 
 		void* operator new(std::size_t size)
 		{
@@ -68,15 +83,7 @@ namespace trampoline
 			return ExecutableAllocator{}.deallocate(ptr, size);
 		}
 
-		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_no_this_type>
-		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
-			: parent(parent)
-			, user_function_no_this(std::forward<LambdaFunction>(lambda), get_allocator())
-		{
-			attach_trampoline();
-		}
-
-		template<typename LambdaFunction> requires std::convertible_to<LambdaFunction, user_function_with_this_type>
+		template<typename LambdaFunction>
 		dynamic_function(ParentClass* parent, LambdaFunction&& lambda)
 			: parent(parent)
 			, user_function(std::forward<LambdaFunction>(lambda), get_allocator())
@@ -143,24 +150,29 @@ namespace trampoline
 
 		R call_user_function(Args... args) noexcept
 		{
-			if (user_function)
+			if constexpr (hasParentClassArg)
+			{
 				return user_function(parent, args...);
-			return user_function_no_this(args...);
+			}
+			else
+			{
+				return user_function(args...);
+			}
 		}
 
 		friend ParentClass;
 
 		ParentClass* parent;
-		user_function_no_this_type user_function_no_this;
-		user_function_with_this_type user_function;
+		user_function_type user_function;
 	};
 
-	template<typename R, typename... Args>
-	struct c_function_ptr<R(Args...)>
+	template<bool dynamic, typename R, typename... Args>
+	struct c_function_ptr<dynamic, R(Args...)>
 	{
 		typedef R (*function_ptr_t)(Args...);
 
-		using wrapper_class = dynamic_function<c_function_ptr, false, R, Args...>;
+		using wrapper_class = dynamic_function<c_function_ptr, dynamic, false, R, Args...>;
+		using user_function_type = typename wrapper_class::user_function_type;
 
 		wrapper_class* _impl;
 
@@ -184,19 +196,19 @@ namespace trampoline
 		}
 	};
 
-	template<typename R, typename... Args>
-	struct c_function_ptr<R (*)(Args...)> : public c_function_ptr<R(Args...)>
+	template<bool dynamic, typename R, typename... Args>
+	struct c_function_ptr<dynamic, R (*)(Args...)> : public c_function_ptr<dynamic, R(Args...)>
 	{
-		using c_function_ptr<R(Args...)>::c_function_ptr;
+		using c_function_ptr<dynamic, R(Args...)>::c_function_ptr;
 	};
 
 #ifdef _M_IX86
-	template<typename R, typename... Args>
-	struct c_stdcall_function_ptr<R(Args...)>
+	template<bool dynamic, typename R, typename... Args>
+	struct c_stdcall_function_ptr<dynamic, R(Args...)>
 	{
 		typedef R ( __stdcall *function_ptr_t)(Args...);
 
-		using wrapper_class = dynamic_function<c_stdcall_function_ptr, true, R, Args...>;
+		using wrapper_class = dynamic_function<c_stdcall_function_ptr, dynamic, true, R, Args...>;
 
 		wrapper_class* _impl;
 
@@ -221,10 +233,46 @@ namespace trampoline
 		}
 	};
 
-	template<typename R, typename... Args>
-	struct c_function_ptr<R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<R(Args...)>
+	template<bool dynamic, typename R, typename... Args>
+	struct c_function_ptr<dynamic, R (__stdcall *)(Args...)> : public c_stdcall_function_ptr<dynamic, R(Args...)>
 	{
 		using c_stdcall_function_ptr<R(Args...)>::c_stdcall_function_ptr;
 	};
 #endif
+
+	template<typename  CallbackSignature, typename RealCallable>
+	auto make_once_function(RealCallable&& callable)
+	{
+		struct function_wrapper
+		{
+			c_function_ptr<true, CallbackSignature>* wrappered_function;
+
+			using function_ptr_t = typename c_function_ptr<true, CallbackSignature>::function_ptr_t;
+
+			operator function_ptr_t()
+			{
+				return static_cast<function_ptr_t>(*wrappered_function);
+			}
+		};
+
+		auto dynamic_allocated_function = new c_function_ptr<true, CallbackSignature>(std::forward<RealCallable>(callable));
+
+		return function_wrapper{dynamic_allocated_function};
+	}
+
+	template<typename  CallbackSignature, typename RealCallable>
+		requires std::convertible_to<RealCallable, typename c_function_ptr<false, CallbackSignature>::user_function_type>
+	auto make_function(RealCallable&& callable)
+	{
+		return c_function_ptr<false, CallbackSignature>(std::forward<RealCallable>(callable));
+	}
+
+	template<typename  CallbackSignature, typename RealCallable>
+		requires std::convertible_to<RealCallable, typename c_function_ptr<true, CallbackSignature>::user_function_type>
+	auto make_function(RealCallable&& callable)
+	{
+		return make_once_function<CallbackSignature>(std::forward<RealCallable>(callable));
+	}
+
+
 } // namespace trampoline

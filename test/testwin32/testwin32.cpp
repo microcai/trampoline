@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 		WINHTTP_NO_PROXY_NAME,
 		WINHTTP_NO_PROXY_BYPASS, 0);
 
-	auto status_cb = trampoline::c_function_ptr<WINHTTP_STATUS_CALLBACK>(
+	auto status_cb = trampoline::make_function<WINHTTP_STATUS_CALLBACK>(
 		[&](IN HINTERNET hInternet,
 			IN DWORD_PTR dwContext,
 			IN DWORD dwInternetStatus,

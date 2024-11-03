@@ -18,7 +18,7 @@ int test_once_callback(callback_function_t cb)
 int main()
 {
     std::string happy = "hello";
-    auto test_cb = trampoline::c_function_ptr<callback_function_t>(
+    auto test_cb = trampoline::make_function<callback_function_t>(
         [=](int arg1, int arg2, float arg3)
         {
             std::cout << happy << " world " << arg3 << std::endl;
@@ -33,8 +33,8 @@ int main()
 
     // 一次性回调，自动删除自身哦！
     // lambda 会多一个 self 参数.
-    // c_function_ptr 会自动推导
-    auto test_once_cb_auto_delete = new trampoline::c_function_ptr<callback_function_t>(
+    // make_function 会自动推导
+    auto test_once_cb_auto_delete = trampoline::make_function<callback_function_t>(
         [=](auto self, int arg1, int arg2, float arg3)
         {
             std::unique_ptr<std::decay_t<decltype(*self)>> auto_delete(self);
@@ -43,6 +43,6 @@ int main()
         }
     );
 
-    test_once_callback(*test_once_cb_auto_delete);
+    test_once_callback(test_once_cb_auto_delete);
     return 0;
 }
