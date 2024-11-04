@@ -10,15 +10,18 @@
 
 #ifdef _MSC_VER
 #define __attribute__(x)
+#else
+#define __declspec(x)
 #endif
 
 namespace trampoline
 {
-	extern "C" void * _asm_get_this_pointer() __attribute__((no_caller_saved_registers));
+	extern "C" void * _asm_get_this_pointer()  __attribute__((no_caller_saved_registers));
 
 	////////////////////////////////////////////////////////////////////
-	struct c_function_ptr
+	struct __declspec(novtable) c_function_ptr
 	{
+		virtual void* raw_function_ptr(){ return nullptr; }
 		virtual ~c_function_ptr(){}
 	};
 
@@ -200,18 +203,18 @@ namespace trampoline
 		c_function_ptr_base(const c_function_ptr_base&) = delete;
 
 		explicit c_function_ptr_base(UserFunction&& lambda)
-			: _impl(new wrapper_class(reinterpret_cast<DerivedClass*>(this), std::forward<UserFunction>(lambda)))
+			: _impl(new wrapper_class(static_cast<DerivedClass*>(this), std::forward<UserFunction>(lambda)))
 		{
 		}
 
-		function_ptr_t get_function_pointer()
+		void* raw_function_ptr()
 		{
-			return reinterpret_cast<function_ptr_t>(_impl->raw_function_ptr());
+			return  _impl->raw_function_ptr();
 		}
 
 		operator function_ptr_t()
 		{
-			return get_function_pointer();
+			return reinterpret_cast<function_ptr_t>(raw_function_ptr());
 		}
 
 	};
@@ -257,22 +260,23 @@ namespace trampoline
 		return c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
+	template<typename function_ptr_t>
+	struct function_wrapper
+	{
+		c_function_ptr* wrappered_function;
+		operator function_ptr_t()
+		{
+			return reinterpret_cast<function_ptr_t>(wrappered_function->raw_function_ptr());
+		}
+	};
+
 	template<typename  CallbackSignature, typename RealCallable>
 		requires (has_self_as_first_arg<CallbackSignature, RealCallable>)
 	auto make_function(RealCallable&& callable)
 	{
-		struct function_wrapper
-		{
-			c_function_ptr_impl<CallbackSignature, RealCallable>* wrappered_function;
+		using function_ptr_t = typename c_function_ptr_impl<CallbackSignature, RealCallable>::function_ptr_t;
 
-			using function_ptr_t = typename c_function_ptr_impl<CallbackSignature, RealCallable>::function_ptr_t;
-
-			operator function_ptr_t()
-			{
-				return static_cast<function_ptr_t>(*wrappered_function);
-			}
-		};
-		return function_wrapper{ new_function<CallbackSignature>(std::forward<RealCallable>(callable)) };
+		return function_wrapper<function_ptr_t>{ new_function<CallbackSignature>(std::forward<RealCallable>(callable)) };
 	}
 
 

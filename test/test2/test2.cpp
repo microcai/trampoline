@@ -47,9 +47,7 @@ int main()
         }
     );
 
-    // NOTE: 也可以这么使用
-    // test_once_callback(*newed_function);
-    test_once_callback(newed_function->get_function_pointer());
+    test_once_callback(*newed_function);
 
     // 设置回调的时候，不想因为 new 出来的导致转换为 C 对象的时候要解引用，可以选这个版本
     // 注意这个版本的 test_once_cb_auto_delete 也是个指针，也需要对 self 进行 delete
