@@ -134,29 +134,26 @@ namespace trampoline
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
 			}
 		}
-#if defined (__i386__)
-		__attribute__((regparm(1)))
-		static R _callback_trunk_cdecl_x86(void* _this, Args... args)
-#else
+
+		__attribute__((regparm(2)))
 		static R _callback_trunk_cdecl_x86(void* _this, const void* const ret_address, Args... args)
-#endif
 		{
-			// 使用了 __attribute__((regparm(1))) 后
-			// _callback_trunk_cdecl_x86 会认为第一个参数，是用 EAX 寄存器传递的
+			// 使用了 __attribute__((regparm(2))) 后
+			// _callback_trunk_cdecl_x86 会认为前两个参数，是用 寄存器传递的
 			// 剩下的参数，用栈传递
-			// 于是，除了 _this 直接等于 EAX 寄存器的数值，这个函数的调用约定本质上
+			// 于是，虽然加了两个参数，但是这个函数的调用约定本质上
 			// 和  R(Args...) 是一模一样的！
 			// 也就是通过编译器白嫖了一个 _this 参数
 			// 于是就免去了对 _asm_get_this_pointer 的调用
 			// 并且编译器生成的 prologue 会绝对避开 EAX 寄存器
 			// 这正是之前的版本里莫名其妙的 崩溃 的由来。
 			// 原来 EAX 会在 prologue 里，调用 _asm_get_this_pointer 前就被污染
-			// 所以改用 __attribute__((regparm(1))) 就避免了 EAX 被污染
+			// 所以改用 __attribute__((regparm(2))) 就避免了 EAX 被污染
 			// 而且让编译器绝对的相信 EAX 是 this
 
 			// 至于 win32，则在汇编里使用 push 两次，将 this 和真正的返回地址都压栈
-			// 这样就等于多压了2个参数
-			// 然后返回到 汇编代码里，再返回到真正的返回地址去
+			// 这样就等于多压了2个参数. 主要是 msvc 没有 __attribute__ 功能
+			// 然后在返回的地方，进行栈平齐操作后，再返回到真正的调用处。
 			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(args...);
 		}
 
