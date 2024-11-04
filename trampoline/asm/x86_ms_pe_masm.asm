@@ -42,10 +42,14 @@ _trampoline2_code_end:
 
 ALIGN 4
 generate_trampoline proc public
+    mov eax, DWORD PTR [ebp + 14];
+    test eax, eax;
+    jnz generate_trampoline2;
     push ebp
     mov  ebp, esp
     push edi
     push esi
+    
     mov edi, DWORD PTR [ebp + 8] ; <-- edi is now _jit_code
     lea esi, trampoline_code ; < -- esi is now &trampoline_code
     mov ecx, (_callback_trunk_cdecl_x86_address - trampoline_code)
