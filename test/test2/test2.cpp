@@ -1,6 +1,7 @@
-﻿#include "trampoline.hpp"
-#include <iostream>
+﻿#include <iostream>
 #include <memory>
+
+import trampoline;
 
 typedef int (* callback_function_t)(int, int, float);
 

@@ -1,12 +1,10 @@
-﻿
-#pragma once
+module;
 
+#include <assert.h>
 #include <type_traits>
 #include <utility>
 #include <memory>
 #include <cstring>
-
-#include "./executable_allocator.hpp"
 
 #ifdef _MSC_VER
 #define __attribute__(x)
@@ -14,12 +12,21 @@
 #define __declspec(x)
 #endif
 
+export module trampoline;
+
+import ExecutableAllocator;
+
+extern "C" // from assembly code
+{
+	extern std::size_t generate_trampoline(void* jit_code_address, const void* call_target);
+}
+
 namespace trampoline
 {
 	extern "C" void * _asm_get_this_pointer()  __attribute__((no_caller_saved_registers));
 
 	////////////////////////////////////////////////////////////////////
-	struct __declspec(novtable) c_function_ptr
+	export struct c_function_ptr
 	{
 		virtual void* raw_function_ptr(){ return nullptr; }
 		virtual ~c_function_ptr(){}
@@ -57,7 +64,12 @@ namespace trampoline
 		static constexpr long _jit_code_size = 64;
 
 		unsigned char _jit_code[_jit_code_size];
-		void generate_trampoline(const void* wrap_func_ptr);
+		void generate_trampoline(const void* wrap_func_ptr)
+		{
+			auto code_size = ::generate_trampoline(_jit_code, wrap_func_ptr);
+			assert(code_size <= _jit_code_size);
+			ExecutableAllocator{}.protect(this, sizeof (*this));
+		}
 
 		void* operator new(std::size_t size)
 		{
@@ -241,7 +253,7 @@ namespace trampoline
 	};
 #endif
 
-	template<typename  CallbackSignature, typename RealCallable>
+	export template<typename  CallbackSignature, typename RealCallable>
 	auto new_function(RealCallable&& callable)
 	{
 		return new c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
@@ -252,14 +264,14 @@ namespace trampoline
 			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
 		>::value;
 
-	template<typename  CallbackSignature, typename RealCallable>
+	export template<typename  CallbackSignature, typename RealCallable>
 		requires (!has_self_as_first_arg<CallbackSignature, RealCallable>)
 	auto make_function(RealCallable&& callable)
 	{
 		return c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
-	template<typename function_ptr_t>
+	export template<typename function_ptr_t>
 	struct function_wrapper
 	{
 		c_function_ptr* wrappered_function;
@@ -269,7 +281,7 @@ namespace trampoline
 		}
 	};
 
-	template<typename  CallbackSignature, typename RealCallable>
+	export template<typename  CallbackSignature, typename RealCallable>
 		requires (has_self_as_first_arg<CallbackSignature, RealCallable>)
 	auto make_function(RealCallable&& callable)
 	{
@@ -280,3 +292,5 @@ namespace trampoline
 
 
 } // namespace trampoline
+
+

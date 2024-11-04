@@ -70,9 +70,20 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	add_compile_options(-fmodules-ts)
 endif()
 
-list(APPEND ASM_SRC src/asm/${ARCH}_${SYSABI}_${EXEUCTABLEFORMAT}_${ASSEMBLER}.${ASM_FILE_EXT})
+list(APPEND ASM_SRC trampoline/asm/${ARCH}_${SYSABI}_${EXEUCTABLEFORMAT}_${ASSEMBLER}.${ASM_FILE_EXT})
 
-add_library(trampoline  include/trampoline.hpp include/executable_allocator.hpp src/executable_allocator.cpp src/trampoline.cpp ${ASM_SRC})
+add_library(trampoline)
+
+target_sources(trampoline PRIVATE
+	 ${ASM_SRC}
+)
+
+target_sources(trampoline PUBLIC
+	FILE_SET
+	CXX_MODULES FILES
+	trampoline/trampoline.cpp
+	trampoline/executable_allocator.cpp
+)
 
 target_include_directories(trampoline PUBLIC include)
 

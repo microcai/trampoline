@@ -1,4 +1,6 @@
 
+module;
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -6,7 +8,19 @@
 #endif
 
 #include <iostream>
-#include "executable_allocator.hpp"
+#include <cstddef>
+
+export module ExecutableAllocator;
+
+export struct ExecutableAllocator
+{
+	void* allocate(std::size_t size);
+
+	void deallocate(void* raw_ptr, std::size_t size);
+	void protect(void* raw_ptr, std::size_t size);
+	void unprotect(void* raw_ptr, std::size_t size);
+};
+
 
 #ifdef _WIN32
 
