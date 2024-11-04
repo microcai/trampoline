@@ -156,13 +156,13 @@ namespace trampoline
 			// 至于 win32，则在汇编里使用 push 两次，将 this 和真正的返回地址都压栈
 			// 这样就等于多压了2个参数. 主要是 msvc 没有 __attribute__ 功能
 			// 然后在返回的地方，进行栈平齐操作后，再返回到真正的调用处。
-			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(args...);
+			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(std::forward<Args>(args)...);
 		}
 
 		static R _callback_trunk_cdecl(Args... args) noexcept
 		{
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
-			return _this->call_user_function(args...);
+			return _this->call_user_function(std::forward<Args>(args)...);
 		}
 
 		~dynamic_function()
@@ -179,11 +179,11 @@ namespace trampoline
 		{
 			if constexpr (hasParentClassArg)
 			{
-				return user_function(parent, args...);
+				return user_function(parent, std::forward<Args>(args)...);
 			}
 			else
 			{
-				return user_function(args...);
+				return user_function(std::forward<Args>(args)...);
 			}
 		}
 
