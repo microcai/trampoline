@@ -19,6 +19,9 @@ import ExecutableAllocator;
 extern "C" // from assembly code
 {
 	extern std::size_t generate_trampoline(void* jit_code_address, const void* call_target);
+#ifdef _M_IX86
+	extern std::size_t generate_trampoline2(void* jit_code_address, const void* call_target);
+#endif
 }
 
 namespace trampoline
@@ -70,7 +73,14 @@ namespace trampoline
 			assert(code_size <= _jit_code_size);
 			ExecutableAllocator{}.protect(this, sizeof (*this));
 		}
-
+#ifdef _M_IX86
+		void generate_trampoline2(const void* wrap_func_ptr)
+		{
+			auto code_size = ::generate_trampoline2(_jit_code, wrap_func_ptr);
+			assert(code_size <= _jit_code_size);
+			ExecutableAllocator{}.protect(this, sizeof(*this));
+		}
+#endif
 		void* operator new(std::size_t size)
 		{
 			return ExecutableAllocator{}.allocate(size);
@@ -114,6 +124,7 @@ namespace trampoline
 
 		void attach_trampoline()
 		{
+#ifdef _M_IX86
 			if constexpr (callabi == x86_stdcall)
 			{
 				/*
@@ -130,9 +141,11 @@ namespace trampoline
 				void* raw;
 				static_assert(sizeof(call_op_func) == sizeof(raw), "member function pointer size assumption failed");
 				memcpy(&raw, &call_op_func, sizeof(raw));
-				generate_trampoline(raw);
+				generate_trampoline2(raw);
 			}
-			else if constexpr (callabi == x86_cdecl)
+			else
+#endif
+			if constexpr (callabi == x86_cdecl)
 			{
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl_x86));
 			}
@@ -146,6 +159,7 @@ namespace trampoline
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
 			}
 		}
+		
 
 #if defined (__i386__)
 		__attribute__((regparm(2)))
