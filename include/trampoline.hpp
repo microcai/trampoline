@@ -135,7 +135,9 @@ namespace trampoline
 			}
 		}
 
+#if defined (__i386__)
 		__attribute__((regparm(2)))
+#endif
 		static R _callback_trunk_cdecl_x86(void* _this, const void* const ret_address, Args... args)
 		{
 			// 使用了 __attribute__((regparm(2))) 后
