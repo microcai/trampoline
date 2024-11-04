@@ -17,7 +17,6 @@
 namespace trampoline
 {
 	extern "C" void * _asm_get_this_pointer()  __attribute__((no_caller_saved_registers));
-
 	////////////////////////////////////////////////////////////////////
 	struct __declspec(novtable) c_function_ptr
 	{
@@ -57,7 +56,7 @@ namespace trampoline
 		static constexpr long _jit_code_size = 64;
 
 		unsigned char _jit_code[_jit_code_size];
-		void generate_trampoline(const void* wrap_func_ptr);
+		void generate_trampoline(const void* wrap_func_ptr, int select_asm_model = 0);
 
 		void* operator new(std::size_t size)
 		{
@@ -118,7 +117,7 @@ namespace trampoline
 				void* raw;
 				static_assert(sizeof(call_op_func) == sizeof(raw), "member function pointer size assumption failed");
 				memcpy(&raw, &call_op_func, sizeof(raw));
-				generate_trampoline(raw);
+				generate_trampoline(raw, 1);
 			}
 			else if constexpr (callabi == x86_cdecl)
 			{
@@ -134,6 +133,7 @@ namespace trampoline
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
 			}
 		}
+		
 
 #if defined (__i386__)
 		__attribute__((regparm(2)))
