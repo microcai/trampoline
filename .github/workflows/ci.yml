@@ -88,7 +88,19 @@ jobs:
         echo "BOOST_ROOT=${{ runner.workspace }}/boost" >> $GITHUB_ENV
         echo "BOOST_LIBRARYDIR=${{ runner.workspace }}/boost/stage/x64/Release/lib" >> $GITHUB_ENV
 
-    - name: Configure CMake
+    - name: Configure CMake with Ninja
+      if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'mac')
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: >
+        cmake -G Ninja -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -S ${{ github.workspace }}
+        -D "BOOST_ROOT=${{ env.BOOST_ROOT }}"
+        -D "BOOST_LIBRARYDIR=${{ env.BOOST_LIBRARYDIR }}"
+
+    - name: Configure CMake with Visual Studio
+      if: startsWith(runner.os, 'Windows')
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >

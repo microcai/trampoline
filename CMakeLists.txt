@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 project(trampoline CXX ASM)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -64,6 +64,10 @@ else()
 		set(ARCH "mips64")
 		set(SYSABI "n64")
 	endif()
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+	add_compile_options(-fmodules-ts)
 endif()
 
 list(APPEND ASM_SRC src/asm/${ARCH}_${SYSABI}_${EXEUCTABLEFORMAT}_${ASSEMBLER}.${ASM_FILE_EXT})
