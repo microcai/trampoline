@@ -4,8 +4,9 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <cstdio>
-#include "trampoline.hpp"
 #include <iostream>
+
+import trampoline;
 
 template <auto fn>
 struct ptr_deleter
