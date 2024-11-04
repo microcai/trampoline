@@ -117,12 +117,10 @@ namespace trampoline
 				memcpy(&raw, &call_op_func, sizeof(raw));
 				generate_trampoline(raw);
 			}
-#if defined (__i386__)
 			else if constexpr (callabi == x86_cdecl)
 			{
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl_x86));
 			}
-#endif
 			else
 			{
 				/*
@@ -133,10 +131,12 @@ namespace trampoline
 				generate_trampoline(reinterpret_cast<void*>(&dynamic_function::_callback_trunk_cdecl));
 			}
 		}
-
 #if defined (__i386__)
 		__attribute__((regparm(1)))
 		static R _callback_trunk_cdecl_x86(void* _this, Args... args)
+#else
+		static R _callback_trunk_cdecl_x86(void* _this, const void* const ret_address, Args... args)
+#endif
 		{
 			// 使用了 __attribute__((regparm(1))) 后
 			// _callback_trunk_cdecl_x86 会认为第一个参数，是用 EAX 寄存器传递的
@@ -150,17 +150,16 @@ namespace trampoline
 			// 原来 EAX 会在 prologue 里，调用 _asm_get_this_pointer 前就被污染
 			// 所以改用 __attribute__((regparm(1))) 就避免了 EAX 被污染
 			// 而且让编译器绝对的相信 EAX 是 this
+
+			// 至于 win32，则在汇编里使用 push 两次，将 this 和真正的返回地址都压栈
+			// 这样就等于多压了2个参数
+			// 然后返回到 汇编代码里，再返回到真正的返回地址去
 			return reinterpret_cast<dynamic_function*>(_this)->call_user_function(args...);
 		}
-#endif
+
 		static R _callback_trunk_cdecl(Args... args) noexcept
 		{
-#if defined(_MSC_VER) && defined(_M_IX86)
-			dynamic_function* _this;
-			__asm { mov _this, ecx};
-#else
 			dynamic_function* _this = reinterpret_cast<dynamic_function*>(_asm_get_this_pointer());
-#endif
 			return _this->call_user_function(args...);
 		}
 
