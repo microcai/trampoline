@@ -2,6 +2,7 @@
 #include "trampoline.hpp"
 #include <iostream>
 #include <memory>
+#include <vector>
 
 // typedef int ( __stdcall * callback_function_t)(int, void*, float);
 typedef int (*callback_function_t)(int, void*, float);
@@ -20,6 +21,20 @@ int test_multi_callback(callback_function_t cb)
 int main()
 {
 	std::string happy = "hello";
+
+	std::vector unsorted = {9,5,2,7};
+
+	bool order_by_dec = false;
+
+	auto sorter = trampoline::make_function<int(const void* arg1, const void* arg2)>([order_by_dec](const void* a, const void* b)
+	{
+		auto _a = *reinterpret_cast<const int*>(a);
+		auto _b = *reinterpret_cast<const int*>(b);
+
+		return order_by_dec ? (_a - _b) : (_b - _a);
+	});
+
+	qsort(unsorted.data(), unsorted.size(), sizeof(decltype(unsorted)::value_type), sorter);
 
 	auto test_cb2 = trampoline::make_function<callback_function_t>(
     [=](int arg1, void* arg2, float arg3)
