@@ -72,17 +72,49 @@ namespace trampoline
 	template<typename ParentClass, typename UserFunction, typename Signature>
 	struct user_function_type_trait_has_parent_class;
 
+	template<typename UserFunction, typename Signature>
+	struct has_same_call_signature;
+
 	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
 	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(Args...)>
 	{
-		static bool constexpr value = std::invocable<UserFunction, ParentClass*, Args...>;
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
 	};
 
 	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
 	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(*)(Args...)>
 	{
-		static bool constexpr value = std::invocable <UserFunction, ParentClass*, Args...>;
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
 	};
+
+#ifdef _M_IX86
+	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
+	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(__stdcall*)(Args...)>
+	{
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
+	};
+
+#endif
+
+	template<typename UserFunction, typename R, typename... Args>
+	struct has_same_call_signature<UserFunction, R(Args...)>
+	{
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, Args...>;
+	};
+
+	template<typename UserFunction, typename R, typename... Args>
+	struct has_same_call_signature<UserFunction, R(*)(Args...)>
+	{
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, Args...>;
+	};
+
+#ifdef _M_IX86
+	template<typename UserFunction, typename R, typename... Args>
+	struct has_same_call_signature<UserFunction, R(__stdcall *)(Args...)>
+	{
+		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, Args...>;
+	};
+#endif
 
 	template<typename UserFunction, typename ParentClass , calling_convertion callabi, typename R, typename... Args>
 	struct dynamic_function : public dynamic_function_base
@@ -247,13 +279,16 @@ namespace trampoline
 		return new c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
 	}
 
-	template<typename  CallbackSignature, typename RealCallable>
+	template<typename CallbackSignature, typename RealCallable>
 	concept has_self_as_first_arg = user_function_type_trait_has_parent_class<
 			c_function_ptr_impl<CallbackSignature, RealCallable>, RealCallable, CallbackSignature
 		>::value;
 
+	template<typename CallbackSignature, typename RealCallable>
+	concept compatable_signature = has_same_call_signature<RealCallable, CallbackSignature>::value;
+
 	template<typename  CallbackSignature, typename RealCallable>
-		requires (!has_self_as_first_arg<CallbackSignature, RealCallable>)
+		requires compatable_signature<CallbackSignature, RealCallable>
 	auto make_function(RealCallable&& callable)
 	{
 		return c_function_ptr_impl<CallbackSignature, RealCallable>(std::forward<RealCallable>(callable));
