@@ -5,7 +5,6 @@
 #include <sys/mman.h>
 #endif
 
-#include <iostream>
 #include "executable_allocator.hpp"
 
 #ifdef _WIN32
@@ -34,6 +33,8 @@ void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
 }
 
 #else
+
+#include <iostream>
 
 void * ExecutableAllocator::allocate(std::size_t size)
 {
