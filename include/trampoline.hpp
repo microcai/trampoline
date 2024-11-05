@@ -75,13 +75,13 @@ namespace trampoline
 	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
 	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(Args...)>
 	{
-		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
+		static bool constexpr value = std::invocable<UserFunction, ParentClass*, Args...>;
 	};
 
 	template<typename ParentClass, typename UserFunction, typename R, typename... Args>
 	struct user_function_type_trait_has_parent_class<ParentClass, UserFunction, R(*)(Args...)>
 	{
-		static bool constexpr value = std::is_invocable_r_v<R, UserFunction, ParentClass*, Args...>;
+		static bool constexpr value = std::invocable <UserFunction, ParentClass*, Args...>;
 	};
 
 	template<typename UserFunction, typename ParentClass , calling_convertion callabi, typename R, typename... Args>
@@ -219,17 +219,17 @@ namespace trampoline
 	};
 
 	template<typename UserFunction, typename R, typename... Args>
-	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>
+	struct c_function_ptr_impl<R(Args...), UserFunction> : public c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<R(Args...), UserFunction>, UserFunction, R, Args...>
 	{
 		typedef R (*function_ptr_t)(Args...);
-		using c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<UserFunction, R(Args...)>, UserFunction, R, Args...>::c_function_ptr_base;
+		using c_function_ptr_base<default_calling_convertion, function_ptr_t, c_function_ptr_impl<R(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 
 	template<typename UserFunction, typename R, typename... Args>
 	struct c_function_ptr_impl<R(*)(Args...), UserFunction> : public c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>
 	{
 		typedef R (*function_ptr_t)(Args...);
-		using c_function_ptr_base<default_calling_convertion, R(*)(Args...) ,c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
+		using c_function_ptr_base<default_calling_convertion, function_ptr_t, c_function_ptr_impl<R(*)(Args...), UserFunction>, UserFunction, R, Args...>::c_function_ptr_base;
 	};
 
 #ifdef _M_IX86
