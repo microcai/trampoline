@@ -24,6 +24,7 @@ void ExecutableAllocator::protect(void* raw_ptr, std::size_t size)
 {
     DWORD old;
     VirtualProtect(raw_ptr, size, PAGE_EXECUTE_READ, &old);
+    FlushInstructionCache(GetCurrentProcess(), raw_ptr, size);
 }
 
 void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
