@@ -4,15 +4,10 @@
 trampoline_callback_entry:
     # 获取本代码的起始位置，存入 r10 寄存器
     mov trampoline_callback_entry@GOTPCREL(%rip),%r10
-    // 获取 目标跳转地址，存入 rax 寄存器
-    mov (jump_address - trampoline_callback_entry)(%r10), %rax
-    // 跳入 rax 寄存器所指示的地址
-    jmp * %rax
+    jmpq * jump_address(%rip) // 6byte + 8byte
 
-.align 16
 jump_address: // 保留 8 个字节的空间，generate_trampoline 会在此处填入跳转地址
     .space 8, 0xcc
-.align 16
 
 // 从 trampoline_entry 到这里，就是一个模板。这段 位置无关代码
 // 会被拷贝到动态创建的内存里，并且在 jump_address 所在的位置填入
@@ -28,7 +23,7 @@ jump_address: // 保留 8 个字节的空间，generate_trampoline 会在此处�
 // 完毕的时候，这段“动态分配”出来的代码，可能已经被“回收”了。
 end_of_trampoline_callback_entry:
 
-
+.align 16
 .global _asm_get_this_pointer
 _asm_get_this_pointer:
     // _callback_trunk_cdecl(Args...) 会调用此 api

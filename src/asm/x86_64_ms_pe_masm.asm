@@ -1,22 +1,19 @@
 
 
-CODE_LEN EQU 16
-
 .code
 
+ALIGN 16
 trampoline_code:
-    lea rax, $
-    mov r10, rax
-    jmp QWORD PTR [rax+ CODE_LEN]
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
+    lea r10, $
+    jmp QWORD PTR [real_target]
+ALIGN 16
+real_target:
+    DQ 0
 
+ALIGN 16
 generate_trampoline proc public
-    enter 0, 0
+    push rbp
+    mov rbp, rsp
     ; rcx = 参数1 _jit_code
     ; rdx = 参数2 call_target
     push rdi
@@ -24,17 +21,18 @@ generate_trampoline proc public
 
     mov rdi, rcx ; rdi is now _jit_code
     lea rsi, trampoline_code ; rsi is now &trampoline_entry
-    mov rcx, CODE_LEN
+    mov rcx, real_target - trampoline_code
     rep movsb
     mov [rdi], rdx
     pop rsi
     pop rdi
-    mov rax, CODE_LEN + 8
+    mov rax, real_target - trampoline_code + 8
     leave
     ret
 generate_trampoline endp
 
 
+ALIGN 16
 _asm_get_this_pointer proc
     mov rax, r10
     ret
