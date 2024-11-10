@@ -1,9 +1,11 @@
-
+﻿
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/mman.h>
 #endif
+
+#include <new>
 
 #include "executable_allocator.hpp"
 
@@ -35,8 +37,6 @@ void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
 
 #else
 
-#include <iostream>
-
 void * ExecutableAllocator::allocate(std::size_t size)
 {
   // return malloc(size);
@@ -47,8 +47,7 @@ void * ExecutableAllocator::allocate(std::size_t size)
 #endif
     if (out == nullptr)
     {
-        std::cerr << "unable to alloc executable page\n";
-        std::terminate();
+        throw std::bad_alloc{};
     }
     return out;
 }
