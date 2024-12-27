@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(trampoline CXX ASM)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 set(ASM_SRC "")
 
@@ -11,8 +11,13 @@ endif(MSVC)
 
 if(WIN32)
 	enable_language(CXX ASM ASM_MASM)
+	if (MSVC)
     set(ASSEMBLER masm)
     set(ASM_FILE_EXT "asm")
+	else()
+    set(ASSEMBLER gas)
+    set(ASM_FILE_EXT "S")
+	endif()
 	set(EXEUCTABLEFORMAT "pe")
 	set(SYSABI "ms")
 
