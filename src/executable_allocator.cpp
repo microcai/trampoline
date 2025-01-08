@@ -37,14 +37,15 @@ void ExecutableAllocator::unprotect(void* raw_ptr, std::size_t size)
 
 #else
 
+#ifdef MAP_JIT
+#define MMAP_FLAG (MAP_PRIVATE | MAP_ANONYMOUS|MAP_JIT)
+#else
+#define MMAP_FLAG (MAP_PRIVATE | MAP_ANONYMOUS)
+#endif
+
 void * ExecutableAllocator::allocate(std::size_t size)
 {
-  // return malloc(size);
-#ifdef MAP_JIT
-    auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_JIT, -1, 0);
-#else
-    auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
+    auto out = mmap(0, size,  PROT_READ | PROT_WRITE, MMAP_FLAG, -1, 0);
     if (out == nullptr)
     {
         throw std::bad_alloc{};
@@ -54,7 +55,6 @@ void * ExecutableAllocator::allocate(std::size_t size)
 
 void ExecutableAllocator::deallocate(void* raw_ptr, std::size_t size)
 {
-    // free(raw_ptr);
     munmap(raw_ptr, size);
 }
 

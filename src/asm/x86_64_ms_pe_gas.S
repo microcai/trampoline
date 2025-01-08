@@ -3,8 +3,8 @@
 .align 16
 trampoline_callback_entry:
     # 获取本代码的起始位置，存入 r10 寄存器
-    lea trampoline_callback_entry@GOTPCREL(%rip),%r10
-    jmpq * jump_address@GOTPCREL(%rip) // 6byte + 8byte
+    lea trampoline_callback_entry(%rip),%r10
+    jmpq * jump_address(%rip) // 6byte + 8byte
 jump_address: // 保留 8 个字节的空间，generate_trampoline 会在此处填入跳转地址
     .space 16, 0xcc
 
